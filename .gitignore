@@ -50,3 +50,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Extra files to be ignored
+*.dat
+*.png
+*.pdf
+*.jpeg
+*.jpg
