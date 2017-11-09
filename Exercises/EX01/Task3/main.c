@@ -19,7 +19,7 @@ int main ()
 	double freq[n];
 	double powspec_data[n];
 	double f = 2;
-    double phi = 0;
+  double phi = 0;
 
 	/* declare file variables */
 	FILE *file1;
