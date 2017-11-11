@@ -53,12 +53,12 @@ ax2.plot(data4[:,0], data4[:,4],':', color='green', label='atom2, dim1')
 ax2.plot(data4[:,0], data4[:,5],':', color='blue', label='atom2, dim2')
 ax2.plot(data4[:,0], data4[:,6],':', color='orange', label='atom2, dim3')
 
-ax2.legend()
+ax2.legend(loc='center right')
 
 # labels
-ax2.set_xlabel(r'time $t$', fontsize=12)
-ax2.set_ylabel(r'atoms 1 and 2 $[Å]$', fontsize=12)
-ax2.set_title(r'particle positions')
+ax2.set_xlabel(r'time $[ps]$', fontsize=12)
+ax2.set_ylabel(r'grid positions $[Å]$', fontsize=12)
+ax2.set_title(r'particle positions for atoms 1 and 2')
 
 
 ##########################################################
@@ -66,15 +66,20 @@ ax2.set_title(r'particle positions')
 ax31 = fig.add_subplot(313)
 
 ax31.plot(data1[:,0], data1[:,4],'b-', label=r'temp')
-ax31.set_xlabel(r'time $t$', fontsize=12)
+ax31.set_xlabel(r'time $[ps]$', fontsize=12)
 ax31.set_ylabel(r'temperature $[K]$', fontsize=12, color='b')
 ax31.tick_params('y', colors='b')
 
 ax32 = ax31.twinx()
-ax32.plot(data1[:,0], data1[:,5],'r:', label=r'pressure')
+ax32.plot(data1[:,0], data1[:,5],'r-', label=r'pressure')
 ax32.set_ylabel(r'pressure $[kPa]$', fontsize=12, color='r')
 ax32.tick_params('y', colors='r')
 ax32.set_title(r'temperature and pressure')
+
+ax31.plot([0, max(data1[:,0])], [500+273.15, 500+273.15], ':', lw=3, color='lightblue', label=r'$T_{eq} = 500 ^{\circ}C$')
+ax32.plot([0, max(data1[:,0])], [101.325, 101.325], ':', lw=3, color='orange', label=r'$P_{eq} = 101.325\ hPa$')
+ax31.legend(loc='center')
+ax32.legend(loc='center right')
 
 
 # display the plot

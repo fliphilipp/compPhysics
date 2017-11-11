@@ -26,20 +26,29 @@ int main()
 	double dt = pow(10,-2);  // time step for integration (ps)
 	double mass = 27 * 1.0364 * pow(10, -4); // mass of Al [eV (ps)^2 / Å^2]
 	double boltz = 8.617 * pow(10,-5);  // Boltzmann constant [eV / K]
+	int startEquilibration = pow(10,2);
+	int endEquilibration = pow(10,3);  // for how long to equilibrate
+	double T_eq = 500.0 + 273.15;  // Equilibrium temperature (500 deg C)
+	double P_eq = 101.325;  // Equilibrium pressure (101.325 kPa at sea level)
+	double rand_disp = 0.05;  // initial dispacements percentage of latparam
+	double tauT = pow(10,-1);  // decay time constant for temperature scaling 
+	double kappaT_tauP_ratio = pow(10,-10);  // only need to choose appropriate ratio for pressure scaling
 
 	// initialize variables
 	double latparam; 
 	double cellLength;
 	int natoms = 4 * ndim * ndim * ndim;  // total number of atoms
 	double pos[natoms][3];  // positions of atoms
-	//double forces[natoms][3];  // forces on atoms
-	double acc[natoms][3];  // accelerations for atoms
 	double vel[natoms][3];  // velocities for atoms
+	double acc[natoms][3];  // accelerations for atoms
 	double current_time;
 	double totEn;
-	double psquare;
+	double vsquare;
+	double alphaT;
+	double alphaP;
 	gsl_rng *my_rng = initialize_rng();  // random number generator
 	int i, j, t;  // iterator variables
+	if (endEquilibration < tsteps) {endEquilibration = tsteps;}
 
 	// allocate for variables to save over time
 	double *potEn = malloc((tsteps + 1) * sizeof(double));
@@ -49,9 +58,9 @@ int main()
 	double (*pos1)[6] = malloc(sizeof(double[tsteps+1][6]));
 
 	// to figure out equilibrium spacing
-	double latparamMin = 1.33;
-	double latparamMax = 1.34;
-	double sweepStep = 0.0001;
+	double latparamMin = 4.0;
+	double latparamMax = 4.1;
+	double sweepStep = 0.001;
 	int nSweep = (int)((latparamMax - latparamMin)/sweepStep);
 	printf("Checking from %.2f to %.2f in steps of %.4f.\n", 
 		latparamMin, latparamMax, sweepStep);
@@ -90,20 +99,21 @@ int main()
 	printf("Minimum potential energy is %e at %.4f Ångström.\n", 
 		minEnergy, latparam);
 
-	// this is what it said online, so using 4.05 Å for now
-	latparam = 4.05;
-	cellLength = latparam * ndim;
-
 	// initialize positions with displacements, uniform dist +/- 0.05 lattice spacing
-	double rand_disp = 0.05;
+	cellLength = latparam * ndim;
 	init_fcc(pos,ndim,latparam);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
 			pos[i][j] += (gsl_rng_uniform(my_rng) * rand_disp * 2 - rand_disp) * latparam;
-		//printf("%.2f\n", (gsl_rng_uniform(my_rng) / 5.0 - 0.1)); // for checking
 		}
-		// printf("%.4f\t%.4f\t%.4f\n", pos[i][0], pos[i][1], pos[i][2]);
 	}
+	// save initial position for first and second atoms
+	pos1[0][0] = pos[0][0];
+	pos1[0][1] = pos[0][1];
+	pos1[0][2] = pos[0][2];
+	pos1[0][3] = pos[1][0];
+	pos1[0][4] = pos[1][1];
+	pos1[0][5] = pos[1][2];
 
 	// initial accelerations
 	get_acc_AL(acc, pos, cellLength, mass, natoms);
@@ -112,7 +122,8 @@ int main()
 	// initial energies
 	potEn[0] = get_potEn_AL(pos, cellLength, natoms);
 	kinEn[0] = 0.0;  // since we initialized with zero velocity
-	temp[0] = 0.0;
+	temp[0] = 0.0;  // initial temperature (since velocities all zero)
+	pres[0] = 0.0;  // initial pressure (since temp is zero)
 
 	// initial velocities (all zero)
 	for (i = 0; i < natoms; i++) {
@@ -124,52 +135,61 @@ int main()
 
 	// timesteps according to velocity Verlet algorithm
 	for (t = 1; t < tsteps + 1; t++) {
-		// v(t+dt/2)
+		// steps 1 and 2 velocity Verlet
 		for (i = 0; i < natoms; i++) {
 			for (j = 0; j < 3; j++) {
-				vel[i][j] += dt * 0.5 * acc[i][j];
+				vel[i][j] += dt * 0.5 * acc[i][j];  // velocities after dt/2
+				pos[i][j] += dt * vel[i][j];  // new positions
 			}
 		}
 		
-		// q(t+dt)
-		for (i = 0; i < natoms; i++) {
-			for (j = 0; j < 3; j++) {
-				pos[i][j] += dt * vel[i][j];
-			}
-		}
-		
-		// a(t+dt)
+		// step 3 velocity Verlet
 		get_acc_AL(acc, pos, cellLength, mass, natoms);
-		//get_forces_AL(acc, pos, latparam, natoms);
 		
-		// v(t+dt)
+		// step 4 velocity Verlet
+		vsquare = 0.0;
 		for (i = 0; i < natoms; i++) {
 			for (j = 0; j < 3; j++) {
-				vel[i][j] += dt * 0.5 * acc[i][j];
+				vel[i][j] += dt * 0.5 * acc[i][j];  // new velocities
+				vsquare += vel[i][j] * vel[i][j];  // get v^2 for temp
+			}
+		}
+
+		temp[t] = vsquare * mass / (3.0 * natoms * boltz);  // current temp in K
+		pres[t] = (natoms * boltz * temp[t] + get_virial_AL(pos, cellLength, natoms)) /
+				pow(cellLength, 3);  // pressure in eV / Å^3
+		pres[t] = 1.6022 * pow(10,8) * pres[t];  // pressure in kPa
+
+		// equilibration
+		if (t > startEquilibration && t < endEquilibration) {
+
+			// calculate alpha scaling factors
+			alphaT = 1.0 + dt / tauT * (T_eq - temp[t]) / temp[t];
+			alphaP = 1.0 - kappaT_tauP_ratio * dt * (P_eq - pres[t]);
+
+			// let temperature and pressure decay
+			for (i = 0; i < natoms; i++) {
+				for (j = 0; j < 3; j++) {
+					vel[i][j] = sqrt(alphaT) * vel[i][j];  // adjusted velocities
+					pos[i][j] = pow(alphaP, 1.0/3.0) * pos[i][j];  // adjusted pressure
+					latparam = pow(alphaP, 1.0/3.0) * latparam;  // adjust the latparam accordingly
+					cellLength = pow(alphaP, 1.0/3.0) * cellLength;  // adjust the cell length accordingly
+				}
 			}
 		}
 
 		// save energies
 		potEn[t] = get_potEn_AL(pos, cellLength, natoms);
 		kinEn[t] = get_kinEn_AL(vel, mass, natoms);
-		psquare = 0.0;
-		for (i = 0; i < natoms; i++) {
-			for (j = 0; j < 3; j++) {
-				psquare += vel[i][j] * vel[i][j];
-			}
-		}
-		temp[t] = psquare / (3.0 * natoms * boltz * mass);
-		pres[t] = (natoms * boltz * temp[t] + get_virial_AL(pos, cellLength, natoms)) /
-				(pow(latparam * (ndim + 1), 3) * 1.6022 * pow(10, 14));  // pressure in kPa
 
-		// save position for first atom
+		// save position for first and second atoms
 		pos1[t][0] = pos[0][0];
 		pos1[t][1] = pos[0][1];
 		pos1[t][2] = pos[0][2];
 		pos1[t][3] = pos[1][0];
 		pos1[t][4] = pos[1][1];
 		pos1[t][5] = pos[1][2];
-	}
+	} // end velocity Verlet loop
 
 	// write energies to file
 	file_energy = fopen("energy.dat","w");
