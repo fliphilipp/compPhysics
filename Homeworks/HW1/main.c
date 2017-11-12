@@ -26,8 +26,10 @@ int main()
 	double dt = pow(10,-2);  // time step for integration (ps)
 	int startEquilibration = pow(10,2);  // when to start equilibrating
 	int endEquilibration = pow(10,5);  // for how long to equilibrate
-	int startAveraging = pow(10,3);  // when to start taking time averages
-	double T_eq = 500.0 + 273.15;  // Equilibrium temperature in Kelvin (corresponds to 500 deg C)
+	int startAveraging = pow(10,4);  // when to start taking time averages
+	double intermediateT = 1000.0 + 273.15;  // for melting the system (corresponds to 1000 deg C)
+	double endIntermediateT = 5 * pow(10,3); // until when we enforce intermediate temperature
+	double T_eq = 700.0 + 273.15;  // Equilibrium temperature in Kelvin (corresponds to 500 / 700 deg C)
 	double mass = 27 * 1.0364 * pow(10, -4); // mass of Al [eV (ps)^2 / Å^2]
 	double boltz = 8.617 * pow(10,-5);  // Boltzmann constant [eV / K]
 	double P_eq = 101.325;  // Equilibrium pressure (101.325 kPa at sea level)
@@ -49,10 +51,13 @@ int main()
 	double alphaP;
 	double sumT;
 	double sumP;
+	double desiredT;
 	gsl_rng *my_rng = initialize_rng();  // random number generator
 	int i, j, t;  // iterator variables
 	if (tsteps < endEquilibration) {endEquilibration = tsteps;}
 	if (startEquilibration > tsteps) {startEquilibration = tsteps;}
+
+	printf("--> Let's fucking go!\n");
 
 	// allocate for variables to save over time
 	double *potEn = malloc((tsteps + 1) * sizeof(double));
@@ -66,7 +71,7 @@ int main()
 	double latparamMax = 4.033;
 	double sweepStep = 0.0001;
 	int nSweep = (int)((latparamMax - latparamMin)/sweepStep);
-	printf("Checking from %.2f to %.2f in steps of %.4f.\n", 
+	printf("--> Checking from %.2f to %.2f in steps of %.4f.\n", 
 		latparamMin, latparamMax, sweepStep);
 	double latParamList[nSweep];
 	double energyLatParam[nSweep];
@@ -77,7 +82,6 @@ int main()
 	FILE *file_latEn;
 	FILE *file_energy;
 	FILE *file_pos1;
-	printf("Let's fucking go!\n");
 
 	// inititalize positions without displacements for plot
 	init_fcc(pos,ndim,latparamMin);
@@ -100,7 +104,7 @@ int main()
 		}
 	}
 	fclose(file_latEn);
-	printf("Minimum potential energy is %e at %.4f Ångström.\n", 
+	printf("--> Minimum potential energy is %e at %.4f Ångström.\n", 
 		minEnergy, latparam);
 
 	// initialize positions with displacements, uniform dist +/- 0.05 lattice spacing
@@ -142,7 +146,7 @@ int main()
 	for (t = 1; t < tsteps + 1; t++) {
 		// print progress
 		if (t % (tsteps / 100) == 0) {
-			printf("\rProgress: %3d%% ", (int) (100.0 * t / tsteps));
+			printf("\r--> Progress: %3d%% ", (int) (100.0 * t / tsteps));
 			fflush(stdout);
 		}
 
@@ -180,8 +184,15 @@ int main()
 		// equilibration
 		if (t > startEquilibration && t < endEquilibration) {
 
+			// set intermediate temperature for melting the system 
+			if (t > startEquilibration && t < endIntermediateT) {
+				desiredT = intermediateT;
+			} else {
+				desiredT = T_eq;
+			}
+
 			// calculate alpha scaling factors
-			alphaT = 1.0 + dt / tauT * (T_eq - temp[t]) / temp[t];
+			alphaT = 1.0 + dt / tauT * (desiredT - temp[t]) / temp[t];
 			alphaP = 1.0 - kappaT_tauP_ratio * dt * (P_eq - pres[t]);
 
 			// let temperature and pressure decay
@@ -208,9 +219,9 @@ int main()
 		pos1[t][5] = pos[1][2];
 	} // end velocity Verlet loop
 
-	printf("\nAveraged over %d time steps.\n", tsteps - startAveraging);
-	printf("Time average temperature: %.5f Celsius.\n", sumT / (tsteps - startAveraging) - 273.15);
-	printf("Time average pressure:    %.5f kPa.\n", sumP / (tsteps - startAveraging));
+	printf("\n--> Averaged over %d time steps.\n", tsteps - startAveraging);
+	printf("--> Time average temperature: %.5f Celsius.\n", sumT / (tsteps - startAveraging) - 273.15);
+	printf("--> Time average pressure:    %.5f kPa.\n", sumP / (tsteps - startAveraging));
 
 	// write energies to file
 	file_energy = fopen("energy.dat","w");
