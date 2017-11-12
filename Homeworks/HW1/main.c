@@ -23,35 +23,53 @@ int main()
 	// parameters
 	int ndim = 4;  // grid size in each dimension  
 	int tsteps = pow(10,5);  // number of iterations
-	double dt = pow(10,-2);  // time step for integration (ps)
+	double dt = pow(10,-3);  // time step for integration (ps)
+	int solid = 0;  // 1 for solid, 0 for fluid
 	int startEquilibration = pow(10,2);  // when to start equilibrating
-	int endEquilibration = pow(10,5);  // for how long to equilibrate
-	int startAveraging = pow(10,4);  // when to start taking time averages
-	double intermediateT = 1000.0 + 273.15;  // for melting the system (corresponds to 1000 deg C)
-	double endIntermediateT = 5 * pow(10,3); // until when we enforce intermediate temperature
-	double T_eq = 700.0 + 273.15;  // Equilibrium temperature in Kelvin (corresponds to 500 / 700 deg C)
+	int endEquilibration = 3*pow(10,4);  // for how long to equilibrate
+	int startAveraging = 3*pow(10,3);  // when to start taking time averages
+	double endIntermediateT = pow(10,4); // until when we enforce intermediate temperature
 	double mass = 27 * 1.0364 * pow(10, -4); // mass of Al [eV (ps)^2 / Å^2]
 	double boltz = 8.617 * pow(10,-5);  // Boltzmann constant [eV / K]
 	double P_eq = 101.325;  // Equilibrium pressure (101.325 kPa at sea level)
 	double rand_disp = 0.05;  // initial dispacements percentage of latparam
-	double tauT = pow(10,-1);  // decay time constant for temperature scaling 
+	double tauT = 0.1;  // decay time constant for temperature scaling 
 	double kappaT_tauP_ratio = pow(10,-10);  // only need to choose appropriate ratio for pressure scaling
 
+	// adjust temperatures for solid vs. fluid case
+	double intermediateT;
+	double T_eq;
+	if (solid == 1) {
+		T_eq = 500.0 + 273.15;  // Equilibrium temperature in Kelvin (500 deg C)
+		intermediateT = T_eq;  // no need for different intermediate temperature
+	} else {
+		T_eq = 700.0 + 273.15;  // Equilibrium temperature in Kelvin (700 deg C)
+		intermediateT = 1000.0 + 273.15;  // for melting the system (1000 deg C)
+	}
+
 	// initialize variables
-	double latparam; 
-	double cellLength;
+	double latparam;  // lattice spacing
+	double cellLength;  // size of full simulation box
 	int natoms = 4 * ndim * ndim * ndim;  // total number of atoms
 	double pos[natoms][3];  // positions of atoms
 	double vel[natoms][3];  // velocities for atoms
 	double acc[natoms][3];  // accelerations for atoms
-	double current_time;
-	double totEn;
-	double vsquare;
-	double alphaT;
-	double alphaP;
-	double sumT;
-	double sumP;
-	double desiredT;
+	double current_time;  // time in ps for printing to file
+	double totEn;  // total energy for writing to file
+	double vsquare;  // squared velocities for pressure calculation
+	double alphaT;  // scaling factor for temperature equilibration
+	double alphaP;  // scaling factor for pressure equilibration
+	double sumT;  // sum of temperatures for temperature time average
+	double sumP;  // sum of temperatures for pressure time average
+	double desiredT;  // the desired temperature to decay to at a certain time
+	double tAverage;  // time average of temperature
+	double pAverage;  // time average of pressure
+	double sumPotEn;  // sum of potential energies for time average
+	double averagePotEn;  // time average of potential energy
+	double sumFluctuationsPotEnSquare;  // sum of squared potential energy fluctuations for time average
+	double averageFluctuationPotEnSquare;  // time average of squared fluctuations in potential energy
+	double heatCapacity;  // calculated heat capaciy
+	double molarHeatCapacity;  // to be able to compare to literature
 	gsl_rng *my_rng = initialize_rng();  // random number generator
 	int i, j, t;  // iterator variables
 	if (tsteps < endEquilibration) {endEquilibration = tsteps;}
@@ -141,6 +159,7 @@ int main()
 	}
 	sumT = 0.0;
 	sumP = 0.0;
+	sumPotEn = 0.0;
 
 	// timesteps according to velocity Verlet algorithm
 	for (t = 1; t < tsteps + 1; t++) {
@@ -170,15 +189,18 @@ int main()
 			}
 		}
 
-		temp[t] = vsquare * mass / (3.0 * natoms * boltz);  // current temp in K
+		temp[t] = vsquare * mass / (3.0 * natoms * boltz);  // save current temp in K
 		pres[t] = (natoms * boltz * temp[t] + get_virial_AL(pos, cellLength, natoms)) /
 				pow(cellLength, 3);  // pressure in eV / Å^3
-		pres[t] = 1.6022 * pow(10,8) * pres[t];  // pressure in kPa
+		pres[t] = 1.6022 * pow(10,8) * pres[t];  // save pressure in kPa
+		potEn[t] = get_potEn_AL(pos, cellLength, natoms);  // save E_pot
+		kinEn[t] = get_kinEn_AL(vel, mass, natoms);  // save E_kin
 
 		// for calculating time averages of temperature and pressure
 		if (t > startAveraging) {
 			sumT += temp[t];
 			sumP += pres[t];
+			sumPotEn += potEn[t];
 		}
 
 		// equilibration
@@ -206,10 +228,6 @@ int main()
 			}
 		}
 
-		// save energies
-		potEn[t] = get_potEn_AL(pos, cellLength, natoms);
-		kinEn[t] = get_kinEn_AL(vel, mass, natoms);
-
 		// save position for first and second atoms
 		pos1[t][0] = pos[0][0];
 		pos1[t][1] = pos[0][1];
@@ -219,9 +237,37 @@ int main()
 		pos1[t][5] = pos[1][2];
 	} // end velocity Verlet loop
 
+	// print results from time averages for temperature and pressure
 	printf("\n--> Averaged over %d time steps.\n", tsteps - startAveraging);
-	printf("--> Time average temperature: %.5f Celsius.\n", sumT / (tsteps - startAveraging) - 273.15);
-	printf("--> Time average pressure:    %.5f kPa.\n", sumP / (tsteps - startAveraging));
+	tAverage = sumT / (tsteps - startAveraging) - 273.15;
+	pAverage = sumP / (tsteps - startAveraging);
+	printf("--> Time average temperature: %.5f Celsius.\n", tAverage);
+	printf("--> Time average pressure:    %.5f kPa.\n", pAverage);
+
+	// calculate heat capacity from fluctuations in potential energy
+	averagePotEn = sumPotEn / (tsteps - startAveraging);
+	sumFluctuationsPotEnSquare = 0.0;
+	for (t = startAveraging; t < tsteps; t++) {
+		sumFluctuationsPotEnSquare += (averagePotEn - potEn[t]) * (averagePotEn - potEn[t]);
+	}
+	averageFluctuationPotEnSquare = sumFluctuationsPotEnSquare / (tsteps - startAveraging);
+	heatCapacity = 3.0 * natoms * boltz / 2.0 / (1.0 - 2.0 * averageFluctuationPotEnSquare 
+		/ (natoms * boltz * boltz * tAverage * tAverage));
+	molarHeatCapacity = heatCapacity * 1.6022 * pow(10,-19) * 6.022 * pow(10,23) / 256.0;
+	printf("--> Average squared fluctuation in potential energy: %.2f\n", 
+		averageFluctuationPotEnSquare);
+	printf("2.0 * averageFluctuationPotEnSquare / (N * k_B^2 * T^2): %.2f\n", 
+		2.0 * averageFluctuationPotEnSquare / (natoms * boltz * boltz * tAverage * tAverage));
+	printf("--> Heat capacity: %.5f ev/K.\n", heatCapacity);
+	printf("--> Molar heat capacity: %.5f J / (K * mol).\n", molarHeatCapacity);
+
+
+
+
+
+
+
+
 
 	// write energies to file
 	file_energy = fopen("energy.dat","w");
