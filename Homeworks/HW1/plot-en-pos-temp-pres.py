@@ -7,15 +7,11 @@ import numpy as np
 
 # input file
 filename1 = 'energy.dat'
-filename2 = 'energy10e-2.dat'
-filename3 = 'energy10e-3.dat'
-filename4 = 'pos1.dat'
+filename2 = 'pos1.dat'
 
 # import data
 data1 = np.loadtxt(filename1)
 data2 = np.loadtxt(filename2)
-data3 = np.loadtxt(filename3)
-data4 = np.loadtxt(filename4)
 
 # initial size of plot 
 fig = plt.figure(figsize=(12,8))
@@ -45,13 +41,13 @@ ax12.set_title(r'$E_{tot}$')
 # plot particle positons for atoms 1 and 2
 ax2 = fig.add_subplot(312)
 
-ax2.plot(data4[:,0], data4[:,1],'-', color='green', label='atom1, dim1')
-ax2.plot(data4[:,0], data4[:,2],'-', color='blue', label='atom1, dim2')
-ax2.plot(data4[:,0], data4[:,3],'-', color='orange', label='atom1, dim3')
+ax2.plot(data2[:,0], data2[:,1],'-', color='green', label='atom1, dim1')
+ax2.plot(data2[:,0], data2[:,2],'-', color='blue', label='atom1, dim2')
+ax2.plot(data2[:,0], data2[:,3],'-', color='orange', label='atom1, dim3')
 
-ax2.plot(data4[:,0], data4[:,4],':', color='green', label='atom2, dim1')
-ax2.plot(data4[:,0], data4[:,5],':', color='blue', label='atom2, dim2')
-ax2.plot(data4[:,0], data4[:,6],':', color='orange', label='atom2, dim3')
+ax2.plot(data2[:,0], data2[:,4],':', color='green', label='atom2, dim1')
+ax2.plot(data2[:,0], data2[:,5],':', color='blue', label='atom2, dim2')
+ax2.plot(data2[:,0], data2[:,6],':', color='orange', label='atom2, dim3')
 
 ax2.legend(loc='center right')
 

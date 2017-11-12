@@ -22,13 +22,14 @@ int main()
 {	
 	// parameters
 	int ndim = 4;  // grid size in each dimension  
-	int tsteps = pow(10,3);  // number of iterations
+	int tsteps = pow(10,5);  // number of iterations
 	double dt = pow(10,-2);  // time step for integration (ps)
+	int startEquilibration = pow(10,2);  // when to start equilibrating
+	int endEquilibration = pow(10,5);  // for how long to equilibrate
+	int startAveraging = pow(10,3);  // when to start taking time averages
+	double T_eq = 500.0 + 273.15;  // Equilibrium temperature in Kelvin (corresponds to 500 deg C)
 	double mass = 27 * 1.0364 * pow(10, -4); // mass of Al [eV (ps)^2 / Å^2]
 	double boltz = 8.617 * pow(10,-5);  // Boltzmann constant [eV / K]
-	int startEquilibration = pow(10,2);
-	int endEquilibration = pow(10,3);  // for how long to equilibrate
-	double T_eq = 500.0 + 273.15;  // Equilibrium temperature (500 deg C)
 	double P_eq = 101.325;  // Equilibrium pressure (101.325 kPa at sea level)
 	double rand_disp = 0.05;  // initial dispacements percentage of latparam
 	double tauT = pow(10,-1);  // decay time constant for temperature scaling 
@@ -46,9 +47,12 @@ int main()
 	double vsquare;
 	double alphaT;
 	double alphaP;
+	double sumT;
+	double sumP;
 	gsl_rng *my_rng = initialize_rng();  // random number generator
 	int i, j, t;  // iterator variables
-	if (endEquilibration < tsteps) {endEquilibration = tsteps;}
+	if (tsteps < endEquilibration) {endEquilibration = tsteps;}
+	if (startEquilibration > tsteps) {startEquilibration = tsteps;}
 
 	// allocate for variables to save over time
 	double *potEn = malloc((tsteps + 1) * sizeof(double));
@@ -58,9 +62,9 @@ int main()
 	double (*pos1)[6] = malloc(sizeof(double[tsteps+1][6]));
 
 	// to figure out equilibrium spacing
-	double latparamMin = 4.0;
-	double latparamMax = 4.1;
-	double sweepStep = 0.001;
+	double latparamMin = 4.032;
+	double latparamMax = 4.033;
+	double sweepStep = 0.0001;
 	int nSweep = (int)((latparamMax - latparamMin)/sweepStep);
 	printf("Checking from %.2f to %.2f in steps of %.4f.\n", 
 		latparamMin, latparamMax, sweepStep);
@@ -131,10 +135,17 @@ int main()
 			vel[i][j] = 0.0;
 		}
 	}
-
+	sumT = 0.0;
+	sumP = 0.0;
 
 	// timesteps according to velocity Verlet algorithm
 	for (t = 1; t < tsteps + 1; t++) {
+		// print progress
+		if (t % (tsteps / 100) == 0) {
+			printf("\rProgress: %3d%% ", (int) (100.0 * t / tsteps));
+			fflush(stdout);
+		}
+
 		// steps 1 and 2 velocity Verlet
 		for (i = 0; i < natoms; i++) {
 			for (j = 0; j < 3; j++) {
@@ -159,6 +170,12 @@ int main()
 		pres[t] = (natoms * boltz * temp[t] + get_virial_AL(pos, cellLength, natoms)) /
 				pow(cellLength, 3);  // pressure in eV / Å^3
 		pres[t] = 1.6022 * pow(10,8) * pres[t];  // pressure in kPa
+
+		// for calculating time averages of temperature and pressure
+		if (t > startAveraging) {
+			sumT += temp[t];
+			sumP += pres[t];
+		}
 
 		// equilibration
 		if (t > startEquilibration && t < endEquilibration) {
@@ -190,6 +207,10 @@ int main()
 		pos1[t][4] = pos[1][1];
 		pos1[t][5] = pos[1][2];
 	} // end velocity Verlet loop
+
+	printf("\nAveraged over %d time steps.\n", tsteps - startAveraging);
+	printf("Time average temperature: %.5f Celsius.\n", sumT / (tsteps - startAveraging) - 273.15);
+	printf("Time average pressure:    %.5f kPa.\n", sumP / (tsteps - startAveraging));
 
 	// write energies to file
 	file_energy = fopen("energy.dat","w");
