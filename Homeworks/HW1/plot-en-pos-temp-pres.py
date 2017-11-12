@@ -1,5 +1,9 @@
+# encoding=utf-8
+# To get proper encoding for Å
+
 # plot the displacements
 # Created by Martin Gren 2014-10-25.
+
 
 # imports
 import matplotlib.pylab as plt
@@ -13,7 +17,7 @@ filename2 = 'pos1.dat'
 data1 = np.loadtxt(filename1)
 data2 = np.loadtxt(filename2)
 
-# initial size of plot 
+# initial size of plot
 fig = plt.figure(figsize=(12,8))
 
 ##########################################################
@@ -53,7 +57,8 @@ ax2.legend(loc='center right')
 
 # labels
 ax2.set_xlabel(r'time $[ps]$', fontsize=12)
-ax2.set_ylabel(r'grid positions $[Å]$', fontsize=12)
+label_to_decode = r'grid positions $[Å]$'
+ax2.set_ylabel(label_to_decode.decode('utf-8'), fontsize=12)
 ax2.set_title(r'particle positions for atoms 1 and 2')
 
 
