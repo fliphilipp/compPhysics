@@ -22,13 +22,13 @@ int main()
 {	
 	// parameters
 	int ndim = 4;  // grid size in each dimension  
-	int tsteps = pow(10,5);  // number of iterations
-	double dt = pow(10,-3);  // time step for integration (ps)
-	int solid = 0;  // 1 for solid, 0 for fluid
+	int tsteps = pow(10,4);  // number of iterations
+	double dt = pow(10,-2);  // time step for integration (ps)
+	int solid = 1;  // 1 for solid, 0 for fluid
 	int startEquilibration = pow(10,2);  // when to start equilibrating
-	int endEquilibration = 3*pow(10,4);  // for how long to equilibrate
-	int startAveraging = 3*pow(10,3);  // when to start taking time averages
-	double endIntermediateT = pow(10,4); // until when we enforce intermediate temperature
+	int endEquilibration = pow(10,3);  // for how long to equilibrate
+	int startAveraging = pow(10,3);  // when to start taking time averages
+	double endIntermediateT = 5*pow(10,2); // until when we enforce intermediate temperature
 	double mass = 27 * 1.0364 * pow(10, -4); // mass of Al [eV (ps)^2 / Å^2]
 	double boltz = 8.617 * pow(10,-5);  // Boltzmann constant [eV / K]
 	double P_eq = 101.325;  // Equilibrium pressure (101.325 kPa at sea level)
@@ -70,6 +70,8 @@ int main()
 	double averageFluctuationPotEnSquare;  // time average of squared fluctuations in potential energy
 	double heatCapacity;  // calculated heat capaciy
 	double molarHeatCapacity;  // to be able to compare to literature
+	double sumTotEn;
+	double averageTotEn;
 	gsl_rng *my_rng = initialize_rng();  // random number generator
 	int i, j, t;  // iterator variables
 	if (tsteps < endEquilibration) {endEquilibration = tsteps;}
@@ -89,7 +91,7 @@ int main()
 	double latparamMax = 4.033;
 	double sweepStep = 0.0001;
 	int nSweep = (int)((latparamMax - latparamMin)/sweepStep);
-	printf("--> Checking from %.2f to %.2f in steps of %.4f.\n", 
+	printf("--> Checking potential from %.5f to %.5f in steps of %.5f.\n", 
 		latparamMin, latparamMax, sweepStep);
 	double latParamList[nSweep];
 	double energyLatParam[nSweep];
@@ -122,7 +124,7 @@ int main()
 		}
 	}
 	fclose(file_latEn);
-	printf("--> Minimum potential energy is %e at %.4f Ångström.\n", 
+	printf("--> Minimum potential energy is %e eV at %.4f Ångström.\n", 
 		minEnergy, latparam);
 
 	// initialize positions with displacements, uniform dist +/- 0.05 lattice spacing
@@ -160,6 +162,7 @@ int main()
 	sumT = 0.0;
 	sumP = 0.0;
 	sumPotEn = 0.0;
+	sumTotEn = 0.0;
 
 	// timesteps according to velocity Verlet algorithm
 	for (t = 1; t < tsteps + 1; t++) {
@@ -201,6 +204,7 @@ int main()
 			sumT += temp[t];
 			sumP += pres[t];
 			sumPotEn += potEn[t];
+			sumTotEn += potEn[t] + kinEn[t];
 		}
 
 		// equilibration
@@ -239,9 +243,9 @@ int main()
 
 	// print results from time averages for temperature and pressure
 	printf("\n--> Averaged over %d time steps.\n", tsteps - startAveraging);
-	tAverage = sumT / (tsteps - startAveraging) - 273.15;
-	pAverage = sumP / (tsteps - startAveraging);
-	printf("--> Time average temperature: %.5f Celsius.\n", tAverage);
+	tAverage = sumT / (tsteps - startAveraging);  // average T in Kelvin
+	pAverage = sumP / (tsteps - startAveraging);  // average P in kPa
+	printf("--> Time average temperature: %.5f Celsius.\n", tAverage - 273.15);
 	printf("--> Time average pressure:    %.5f kPa.\n", pAverage);
 
 	// calculate heat capacity from fluctuations in potential energy
@@ -251,21 +255,15 @@ int main()
 		sumFluctuationsPotEnSquare += (averagePotEn - potEn[t]) * (averagePotEn - potEn[t]);
 	}
 	averageFluctuationPotEnSquare = sumFluctuationsPotEnSquare / (tsteps - startAveraging);
-	heatCapacity = 3.0 * natoms * boltz / 2.0 / (1.0 - 2.0 * averageFluctuationPotEnSquare 
-		/ (natoms * boltz * boltz * tAverage * tAverage));
+	heatCapacity = (3.0 * natoms * boltz / 2.0) * 1.0 / (1.0 - 2.0 * averageFluctuationPotEnSquare 
+		/ (3 * natoms * boltz * boltz * tAverage * tAverage));
 	molarHeatCapacity = heatCapacity * 1.6022 * pow(10,-19) * 6.022 * pow(10,23) / 256.0;
-	printf("--> Average squared fluctuation in potential energy: %.2f\n", 
+	printf("--> Average squared fluctuation in potential energy: %.5f\n", 
 		averageFluctuationPotEnSquare);
-	printf("2.0 * averageFluctuationPotEnSquare / (N * k_B^2 * T^2): %.2f\n", 
-		2.0 * averageFluctuationPotEnSquare / (natoms * boltz * boltz * tAverage * tAverage));
 	printf("--> Heat capacity: %.5f ev/K.\n", heatCapacity);
 	printf("--> Molar heat capacity: %.5f J / (K * mol).\n", molarHeatCapacity);
 
-
-
-
-
-
+	averageTotEn = sumTotEn / (tsteps - startAveraging);
 
 
 
