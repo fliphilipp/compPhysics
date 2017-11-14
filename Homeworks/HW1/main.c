@@ -20,14 +20,19 @@ gsl_rng* initialize_rng();
 
 int main()
 {	
+	printf("--> Initialize variables.\n");
+
 	// parameters
 	int ndim = 4;  // grid size in each dimension  
-	int tsteps = pow(10,4);  // number of iterations
+	int tsteps = 15 * pow(10,3);  // number of iterations
 	double dt = pow(10,-2);  // time step for integration (ps)
-	int solid = 1;  // 1 for solid, 0 for fluid
+	int solid = 0;  // 1 for solid, 0 for fluid
 	int startEquilibration = pow(10,2);  // when to start equilibrating
-	int endEquilibration = pow(10,3);  // for how long to equilibrate
-	int startAveraging = pow(10,3);  // when to start taking time averages
+	int endEquilibration = 3 * pow(10,3);  // for how long to equilibrate
+	int startAveraging = 3 * pow(10,3);  // when to start taking time averages
+	int nDistanceMeasures = 100;  // how many times to calculate all distances for radial dist func
+	int distanceMeasurementInterval = (int) (1.0 / dt); // measure each picosecond for radial dist func
+	int boxesToMeasure = 1;  // measure distances up to twice the cell length for radial dist func
 	double endIntermediateT = 5*pow(10,2); // until when we enforce intermediate temperature
 	double mass = 27 * 1.0364 * pow(10, -4); // mass of Al [eV (ps)^2 / Å^2]
 	double boltz = 8.617 * pow(10,-5);  // Boltzmann constant [eV / K]
@@ -40,7 +45,7 @@ int main()
 	double intermediateT;
 	double T_eq;
 	if (solid == 1) {
-		T_eq = 500.0 + 273.15;  // Equilibrium temperature in Kelvin (500 deg C)
+		T_eq = 20.0 + 273.15;  // Equilibrium temperature in Kelvin (500 deg C)
 		intermediateT = T_eq;  // no need for different intermediate temperature
 	} else {
 		T_eq = 700.0 + 273.15;  // Equilibrium temperature in Kelvin (700 deg C)
@@ -50,10 +55,16 @@ int main()
 	// initialize variables
 	double latparam;  // lattice spacing
 	double cellLength;  // size of full simulation box
+	double cellLengthLargeBox; 
 	int natoms = 4 * ndim * ndim * ndim;  // total number of atoms
 	double pos[natoms][3];  // positions of atoms
 	double vel[natoms][3];  // velocities for atoms
 	double acc[natoms][3];  // accelerations for atoms
+	int nDistances = natoms * (natoms - 1) / 2;  // number pairwise distances
+	int nBoxes = (int) pow(((2 * boxesToMeasure) + 1), 3);  // number of copies we need for radial dist func
+	double largeBoxPos[natoms * nBoxes][3];  // to get all neighboring boxes
+	int nDistLargeBox = natoms * (nBoxes * natoms - (natoms + 1) / 2); // number distances to large box for radial dist func
+	int distancesMeasured;  // total number of distances measured (for info)
 	double current_time;  // time in ps for printing to file
 	double totEn;  // total energy for writing to file
 	double vsquare;  // squared velocities for pressure calculation
@@ -73,11 +84,10 @@ int main()
 	double sumTotEn;
 	double averageTotEn;
 	gsl_rng *my_rng = initialize_rng();  // random number generator
-	int i, j, t;  // iterator variables
+	double dx, dy, dz;  // for adding neighboring boxes
+	int i, j, t, counter;  // iterator variables
 	if (tsteps < endEquilibration) {endEquilibration = tsteps;}
 	if (startEquilibration > tsteps) {startEquilibration = tsteps;}
-
-	printf("--> Let's fucking go!\n");
 
 	// allocate for variables to save over time
 	double *potEn = malloc((tsteps + 1) * sizeof(double));
@@ -85,6 +95,10 @@ int main()
 	double *temp = malloc((tsteps + 1) * sizeof(double));
 	double *pres = malloc((tsteps + 1) * sizeof(double));
 	double (*pos1)[6] = malloc(sizeof(double[tsteps+1][6]));
+	double *distLargeBox = malloc(nDistLargeBox * sizeof(double)); // distance to large box
+	double *distances = malloc(nDistances * sizeof(double)); // pairwise distances of atoms
+
+	printf("--> Let's fucking go!\n");
 
 	// to figure out equilibrium spacing
 	double latparamMin = 4.032;
@@ -102,6 +116,8 @@ int main()
 	FILE *file_latEn;
 	FILE *file_energy;
 	FILE *file_pos1;
+	FILE *file_largeBox;
+	FILE *file_distancesLargeBox;
 
 	// inititalize positions without displacements for plot
 	init_fcc(pos,ndim,latparamMin);
@@ -164,11 +180,16 @@ int main()
 	sumPotEn = 0.0;
 	sumTotEn = 0.0;
 
+	// clear file for distances
+	file_distancesLargeBox = fopen("distances-largebox.dat","w");
+	fclose(file_distancesLargeBox);
+
+	distancesMeasured = 0;
 	// timesteps according to velocity Verlet algorithm
 	for (t = 1; t < tsteps + 1; t++) {
 		// print progress
 		if (t % (tsteps / 100) == 0) {
-			printf("\r--> Progress: %3d%% ", (int) (100.0 * t / tsteps));
+			printf("\r--> Simulation progress: %3d%% ", (int) (100.0 * t / tsteps));
 			fflush(stdout);
 		}
 
@@ -232,6 +253,28 @@ int main()
 			}
 		}
 
+		if (t > startAveraging && t % distanceMeasurementInterval == 0 && distancesMeasured < nDistanceMeasures) {
+			// get positions of all surrounding boxes
+			counter = 0;
+			add_box(largeBoxPos, pos, 0.0, 0.0, 0.0, natoms, &counter);
+			for (dx = - 1.0 * boxesToMeasure * cellLength; dx < 1.0001 * boxesToMeasure * cellLength; dx += cellLength) {
+				for (dy = - 1.0 * boxesToMeasure * cellLength; dy < 1.0001 * boxesToMeasure * cellLength; dy += cellLength) {
+					for (dz = - 1.0 * boxesToMeasure * cellLength; dz < 1.0001 * boxesToMeasure * cellLength; dz += cellLength) {
+						if (dx != 0.0 || dy != 0.0 || dz != 0.0) {
+							add_box(largeBoxPos, pos, dx, dy, dz, natoms, &counter);
+							//printf("-----> dx = %.2f, dy = %.2f, dz = %.2f, counter = %d\n",dx, dy, dz, counter);
+						}
+					}
+				}
+			}
+
+			// get distances to all atoms in the large box
+			cellLengthLargeBox = 3.0 * cellLength;
+			get_distances_largebox(largeBoxPos, cellLengthLargeBox, natoms, nBoxes);
+			distancesMeasured ++;
+		}
+
+
 		// save position for first and second atoms
 		pos1[t][0] = pos[0][0];
 		pos1[t][1] = pos[0][1];
@@ -262,9 +305,32 @@ int main()
 		averageFluctuationPotEnSquare);
 	printf("--> Heat capacity: %.5f ev/K.\n", heatCapacity);
 	printf("--> Molar heat capacity: %.5f J / (K * mol).\n", molarHeatCapacity);
-
 	averageTotEn = sumTotEn / (tsteps - startAveraging);
 
+	printf("--> Cell length: %.5f\n", cellLength);
+	file_distancesLargeBox = fopen("distances-largebox.dat","a"); // write cell length for use in matlab
+		fprintf(file_distancesLargeBox, "%.10f\n", cellLength);
+		fprintf(file_distancesLargeBox, "%d\n", nDistanceMeasures);
+	fclose(file_distancesLargeBox);
+
+	/*
+	// get distances of simulating box
+	get_pairwise_distances(distances, pos, cellLength,natoms);
+	file_distances = fopen("distances.dat","w");
+	fprintf(file_distances, "%e\n",cellLength);
+	for (i = 0; i < nDistances; i++) {
+		fprintf(file_distances, "%e\n",distances[i]);
+	}
+	fclose(file_distances);
+	*/
+
+	// write positions of large box to file
+	file_largeBox = fopen("largeBox.dat","w");
+	for (i = 0; i < 27 * natoms; i++) {
+		fprintf(file_largeBox, "%.4f\t%.4f\t%.4f\n",
+			largeBoxPos[i][0], largeBoxPos[i][1], largeBoxPos[i][2]);
+	}
+	fclose(file_largeBox);
 
 
 	// write energies to file
@@ -293,6 +359,8 @@ int main()
 	free(pos1); pos1 = NULL;
 	free(temp); temp = NULL;
 	free(pres); pres = NULL;
+	free(distLargeBox); distLargeBox = NULL;
+	free(distances); distances = NULL;
 
 	return 0;
 }
