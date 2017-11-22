@@ -57,3 +57,4 @@ dkms.conf
 *.pdf
 *.jpeg
 *.jpg
+*.data
