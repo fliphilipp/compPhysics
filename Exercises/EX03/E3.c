@@ -20,6 +20,8 @@ void one_dim_integral(){
 
   // Print expected value to compare
   printf("*******************************************\n");
+  printf("************UNIFORM DISTRIBUTION***********\n");
+  printf("*******************************************\n");
   printf("According to Wolfram Alpha\n");
   printf("the expected value of the integral is: %.8F\n", (double) 1/6);
   printf("*******************************************\n");
@@ -74,6 +76,8 @@ void sine_integral(){
   double x_var[4][10000];
 
   // Print expected value to compare
+  printf("*************SINE DISTRIBUTION*************\n");
+  printf("*******************************************\n");
   printf("According to Wolfram Alpha\n");
   printf("the expected value of the integral is: %.8F\n", (double) 1/6);
   printf("*******************************************\n");
@@ -98,7 +102,12 @@ void sine_integral(){
       sum += x_var[x][t] * (1 - x_var[x][t]) * 2 / sin(PI * x_var[x][t]) / PI;
 
       // Calculate the variance
-      temp = x_var[x][t] * (1 - x_var[x][t]) * 2 / sin(PI * x_var[x][t]) * x_var[x][t] * (1 - x_var[x][t]) * 2 / sin(PI * x_var[x][t]) / PI / PI;
+      temp = x_var[x][t] * (1 - x_var[x][t]) * 2 \
+          / sin(PI * x_var[x][t]) * x_var[x][t] * (1 - x_var[x][t]) * 2 \
+          / sin(PI * x_var[x][t]) \
+          / PI \
+          / PI;
+
       square_sum += pow(temp, 2);
 
     }
