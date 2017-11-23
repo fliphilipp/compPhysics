@@ -27,8 +27,7 @@ void one_dim_integral(){
   printf("*******************************************\n");
   printf("************UNIFORM DISTRIBUTION***********\n");
   printf("*******************************************\n");
-  printf("According to Wolfram Alpha\n");
-  printf("the expected value of the integral is: %.8F\n", (double) 1/6);
+  printf("The expected value of the integral is approx: %.8F\n", (double) 1/6);
   printf("*******************************************\n");
 
   // Run for 10, 10^2, 10^3 and 10^4
@@ -45,8 +44,6 @@ void one_dim_integral(){
 
       // Get a random sample
       x_var[t] = gsl_rng_uniform(my_rng);
-      // the rand() method from the math.h lib gives better results...
-      // x_var[t] = (double) rand() / (double) RAND_MAX;
 
       
       // Calculate the big sum
@@ -87,8 +84,7 @@ void sine_integral(){
   // Print expected value to compare
   printf("*************SINE DISTRIBUTION*************\n");
   printf("*******************************************\n");
-  printf("According to Wolfram Alpha\n");
-  printf("the expected value of the integral is: %.8F\n", (double) 1/6);
+  printf("The expected value of the integral is approx: %.8F\n", (double) 1/6);
   printf("*******************************************\n");
 
   // Run for 10, 10^2, 10^3 and 10^4
@@ -103,8 +99,6 @@ void sine_integral(){
 
       // Get a random sample
       r = gsl_rng_uniform(my_rng);
-      // the rand() method from the math.h lib gives better results...
-      // r = (double) rand() / (double) RAND_MAX;
 
       // Push the random sample through the sine distribution
       x_var[x][t] = acos(1 - 2*r) / PI;
@@ -146,6 +140,92 @@ void sine_integral(){
   fclose(out_file);
 }
 
+void metropolis(){
+  // Initialize vars
+  int N = 10000, t, x;
+  double p_max = 0.01;
+  double x_var[N], p_var, sum, square_sum, trial, r;
+  double error, avg, var_avg;
+  double delta = 0.55;
+  int total = 0;
+
+  // random number generator
+  gsl_rng *my_rng = initialize_rng();
+
+  printf("************METROPOLS INTEGRAL*************\n");
+  printf("*******************************************\n");
+  printf("The expected value of the integral is approx: %.8F\n", (double) 1/6);
+  printf("*******************************************\n");
+
+  // Prepare variables before looping
+  x_var[0] = 0.5;
+  p_var = 2 / sin(PI * x_var[0]) / PI;
+
+  for(t = 1; t < N; t++){
+    
+    // Let the trials begin!
+    do {
+
+      // Get random
+      do {
+        r = gsl_rng_uniform(my_rng);
+      } while (r > 1.0);
+
+      // Calculate next value of x for the trial
+      x_var[t] =  x_var[t - 1] + delta * (r - 0.5);
+
+      // Find the probability
+      p_var = 2 / sin(PI * x_var[t]) / PI;
+
+      trial = p_var / p_max;
+
+      // Get random
+      do {
+        r = gsl_rng_uniform(my_rng);
+      } while (r > 1.0);
+
+      total++;
+
+    // Test for the Rejection Method
+    } while (trial < r);
+    
+    // Calculate the big sum
+    sum += x_var[t] * (1 - x_var[t]) * 2 / sin(PI * x_var[t]) / PI;
+
+    // Calculate the variance
+    square_sum += x_var[t] * (1 - x_var[t]) * 2 \
+                  / sin(PI * x_var[t]) * x_var[t] * (1 - x_var[t]) * 2 \
+                  / sin(PI * x_var[t]) \
+                  / PI \
+                  / PI;
+
+  }
+
+
+  // Take the average of the big sum
+  avg = sum / N;
+
+  // Calculate the error margin
+  var_avg = square_sum / N;
+  error = (var_avg - pow(avg,2))/N;
+  error = sqrt(error);
+
+  // Results!!
+  printf("N = %i | Integral value = %.4F | Error margin = %.4F \n", N, avg, error );
+  printf("Percentage of approved trials = %.1f\n", 100*(N/total) );
+  printf("%i\n", total);
+
+  // Save results in file:
+  FILE *out_file;
+  out_file = fopen("task3.data", "w");
+
+  for(x = 0; x < N; x++){
+    fprintf(out_file, "%F \n", x_var[x]);
+  }
+
+  fclose(out_file);
+}
+
 int main()
 {
   int i, nbr_of_lines;
@@ -167,6 +247,9 @@ int main()
 
   // Run Task 2
   sine_integral();
+
+  // Run Task 3
+  metropolis();
 }
 
 
