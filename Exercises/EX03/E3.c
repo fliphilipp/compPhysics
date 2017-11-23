@@ -7,8 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <gsl/gsl_randist.h>
 #include "helper_funcs.h"
 #define PI 3.141592653589
+
+gsl_rng* initialize_rng();
 
 // Task 1
 // Evaluate the integral with the Monte Carlo method
@@ -17,6 +20,8 @@ void one_dim_integral(){
   // Initialize vars
   int x, t, N;
   double error, sum, avg, var_avg, square_sum;
+  // random number generator
+  gsl_rng *my_rng = initialize_rng();
 
   // Print expected value to compare
   printf("*******************************************\n");
@@ -32,14 +37,16 @@ void one_dim_integral(){
     N = pow(10,x+1);
     // Reset according to new length N
     double x_var[N];
+    sum = 0;
+    square_sum = 0;
 
     // Integrate!
     for(t = 0; t < N; t++){
 
       // Get a random sample
-      // x_var[t] = (double) gls_random();
+      x_var[t] = gsl_rng_uniform(my_rng);
       // the rand() method from the math.h lib gives better results...
-      x_var[t] = (double) rand() / (double) RAND_MAX;
+      // x_var[t] = (double) rand() / (double) RAND_MAX;
 
       
       // Calculate the big sum
@@ -71,9 +78,11 @@ void sine_integral(){
 
   // Initialize vars
   int x, t, N;
-  double r, error, sum, avg, var_avg, square_sum, temp;
+  double r, error, sum, avg, var_avg, square_sum;
   // Set x array size to max N
   double x_var[4][10000];
+  // random number generator
+  gsl_rng *my_rng = initialize_rng();
 
   // Print expected value to compare
   printf("*************SINE DISTRIBUTION*************\n");
@@ -86,14 +95,16 @@ void sine_integral(){
   for(x = 0; x < 4; x++){
     
     N = pow(10,x+1);
+    sum = 0;
+    square_sum = 0;
 
     // Integrate!
     for(t = 0; t < N; t++){
 
       // Get a random sample
-      // x_var[t] = (double) gls_random();
+      r = gsl_rng_uniform(my_rng);
       // the rand() method from the math.h lib gives better results...
-      r = (double) rand() / (double) RAND_MAX;
+      // r = (double) rand() / (double) RAND_MAX;
 
       // Push the random sample through the sine distribution
       x_var[x][t] = acos(1 - 2*r) / PI;
@@ -102,13 +113,11 @@ void sine_integral(){
       sum += x_var[x][t] * (1 - x_var[x][t]) * 2 / sin(PI * x_var[x][t]) / PI;
 
       // Calculate the variance
-      temp = x_var[x][t] * (1 - x_var[x][t]) * 2 \
-          / sin(PI * x_var[x][t]) * x_var[x][t] * (1 - x_var[x][t]) * 2 \
-          / sin(PI * x_var[x][t]) \
-          / PI \
-          / PI;
-
-      square_sum += pow(temp, 2);
+      square_sum += x_var[x][t] * (1 - x_var[x][t]) * 2 \
+                    / sin(PI * x_var[x][t]) * x_var[x][t] * (1 - x_var[x][t]) * 2 \
+                    / sin(PI * x_var[x][t]) \
+                    / PI \
+                    / PI;
 
     }
 
@@ -117,7 +126,7 @@ void sine_integral(){
 
     // Calculate the error margin
     var_avg = square_sum / N;
-    error = (var_avg - pow(avg,2));
+    error = (var_avg - pow(avg,2))/N;
     error = sqrt(error);
 
     // Results!!
@@ -158,4 +167,16 @@ int main()
 
   // Run Task 2
   sine_integral();
+}
+
+
+// helper function to initialize the rng
+gsl_rng* initialize_rng() {
+  const gsl_rng_type *rng_type;
+  gsl_rng *my_rng ;
+  gsl_rng_env_setup();
+  rng_type = gsl_rng_default;
+  my_rng = gsl_rng_alloc(rng_type);
+  gsl_rng_set(my_rng, time(NULL));
+  return my_rng;
 }
