@@ -112,17 +112,20 @@ title('Probability distribution of p_n');
 xlabel('p_n');
 ylabel('Probability');
 
-%% Task 4
+%% Task 4b
 clc; clf; clear all;
 
 data = importdata('MC.txt');
 numlags = 1000;
 
-[corr,lags] = xcorr(data);
-
-corr = gather(corr);
-
-corr = autocorr(data, numlags);
-
-subplot(1,1,1)
-plot(0:numlags,corr);
+% data = importdata('task4b.data');
+% plot(1:length(data), data);
+% 
+% [corr,lags] = xcorr(data);
+% 
+% corr = gather(corr);
+% 
+% corr = autocorr(data, numlags);
+% 
+% subplot(1,1,1)
+% plot(0:numlags,corr);

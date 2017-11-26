@@ -112,11 +112,13 @@ void sine_integral(){
       // Get a random sample
       r = gsl_rng_uniform(my_rng);
 
-      // Push the random sample through the sine distribution
-      x_var[x][t] = asin(r) / PI;
+      // Push the random sample through the reverse of the integral of the weight function 
+      // Integral of sin(PI * r) => -cos(PI * r) / PI
+      // Inverse => acos(- PI * r) / PI
+      x_var[x][t] = acos(- r) / PI;
       
       // Calculate the big sum
-      new = x_var[x][t] * (1 - x_var[x][t]);
+      new = (x_var[x][t] * (1 - x_var[x][t])) / acos(-  x_var[x][t]) / PI;
       sum += new;
 
       // Calculate the variance
@@ -152,11 +154,15 @@ void sine_integral(){
 void metropolis(){
   // Initialize vars
   int N = 10000, t=0, x;
-  double p_m = 0.5; // Initialize probability of state null to 0.5
+
+  // Initialize probability of state null to 1
+  // since we will always be there 100% of the time
+  double p_m = 1;
+
   double x_var[N], y_var[N], z_var[N]; 
   double p_n[N], sum, square_sum = 0, trial, r;
   double error, avg, var_avg, new;
-  double delta = -0.9;
+  double delta = 2;
   int total = 0;
 
   // random number generator
@@ -169,8 +175,7 @@ void metropolis(){
   x_var[0] = 0;
   y_var[0] = 0;
   z_var[0] = 0;
-  p_n[0] = sqrt(-x_var[t] * x_var[t] - log(pow(PI,-3/2) * y_var[t]) \
-          - z_var[t] * z_var[t]);
+  p_n[0] = pow(PI,-3/2) * exp(- (pow(x_var[0],2) + pow(y_var[0],2) + pow(z_var[0],2)) );
   sum = 0;
   square_sum = 0;
 
@@ -185,12 +190,23 @@ void metropolis(){
 
     // Calculate next value of x for the trial
     x_var[t] =  x_var[t - 1] + delta * (r - 0.5);
+
+    // Get random
+    do {
+      r = gsl_rng_uniform(my_rng);
+    } while (r > 1.0); // Just to be safe
+    // Calculate next value of y for the trial
     y_var[t] =  y_var[t - 1] + delta * (r - 0.5);
+
+    // Get random
+    do {
+      r = gsl_rng_uniform(my_rng);
+    } while (r > 1.0); // Just to be safe
+    // Calculate next value of y for the trial
     z_var[t] =  z_var[t - 1] + delta * (r - 0.5);
 
-    // Transform through the inverse of the weight function!
-    p_n[t] = sqrt( - pow(x_var[t],2) - log(pow(PI,-3/2) * y_var[t]) \
-          - pow(z_var[t],2));
+    // Transform through the weight function!
+    p_n[t] = pow(PI,-3/2) * exp(- (pow(x_var[t],2) + pow(y_var[t],2) + pow(z_var[t],2)) );
     // Ratio of current state prob over previous state prob
     trial = p_n[t] / p_m;
 
@@ -296,12 +312,12 @@ void correlation_function(double *array, int array_length){
     decay_time++;
   }
 
-  stat_ineff = relaxation_time * 2;
+  stat_ineff = (double) relaxation_time * 2;
 
-  printf("Function reaches 10%% of it's initial value %i times!\n", decay_time);
+  printf("Function reaches 10%% of its initial value at time t = %i\n", decay_time);
+  printf("Statistical inefficiency s = %F \n", stat_ineff);
   total_error = sqrt((square_mean_fi - mean_fi*mean_fi)/steps*stat_ineff);
-  printf("Statistical inefficiency: %F \n", stat_ineff);
-  printf("Result: %.8e | Error margin: %.10e \n", mean_fi, total_error);
+  printf("Result: %.4f | Error margin: %.4e \n", mean_fi, total_error);
 
   printf("*******************************************\n");
 }
@@ -311,9 +327,58 @@ void block_averaging(double *array, int array_length){
   printf("******************TASK 4b******************\n");
   printf("*******************************************\n");
 
+  // Declaration and initiation of variables
+  int i, j;
+  int block_size = 500;
+  int nbr_blocks = array_length/block_size;
+  double block_means[nbr_blocks];
+  double square_block_means[nbr_blocks];
+  double var_f[nbr_blocks], total_error;
+  double mean, square_mean, var_F, s;
+  double new, mean_var_f = 0.0, square_mean_var_f = 0.0;
 
+  // Determine variance for the whole array
+  for(i = 0; i < array_length; i++){
+    mean += array[i] / array_length;
+    square_mean += pow(array[i],2) / array_length;
+  }
 
+  var_F = square_mean - mean*mean;
+  
+  // Determine average in each block
+  for(i = 0; i < nbr_blocks; i++){
+    
+    block_means[i] = 0.0;
+    square_block_means[i] = 0.0;
+    var_f[i] = 0.0;
+    
+    for(j = 0; j < block_size; j++){
+      block_means[i] += array[( i * block_size + j )] / block_size;
+      square_block_means[i] += pow(array[( i * block_size + j )],2) / block_size;
+    }
+    
+    var_f[i] = square_block_means[i] - pow(block_means[i],2);
+
+    mean_var_f += var_f[i] / (block_size * nbr_blocks);
+    square_mean_var_f += pow(var_f[i],2) / (block_size * nbr_blocks);
+  }
+
+  s = block_size * var_F / mean_var_f;
+  printf("Statistical inefficiency s = %f\n", s);
+
+  total_error = sqrt((square_mean_var_f - pow(mean_var_f,2)) / (block_size * s));
+  printf("Result: %.4f | Error margin: %.4e \n", mean, total_error);
   printf("*******************************************\n");
+
+  // Save results in file:
+  FILE *out_file;
+  out_file = fopen("task4b.data", "w");
+
+  for(int x = 0; x < nbr_blocks; x++){
+    fprintf(out_file, "%F\n", var_f[x]);
+  }
+
+  fclose(out_file);
 }
 
 int main()
