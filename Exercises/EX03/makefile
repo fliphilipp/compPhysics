@@ -5,8 +5,7 @@ CC = gcc # c-compiler
 CFLAGS = -O3 -W # -O3 gives optimization, -W gives warnings
 LIBS = -lm -lgsl -lgslcblas # libraries
 
-HEADERS = helper_funcs.h
-OBJECTS = E3.o helper_funcs.o # object files to produce
+OBJECTS = E3.o # object files to produce
 PROGRAM = go # name of executable to be built
 
 #

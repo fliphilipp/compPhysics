@@ -112,20 +112,44 @@ title('Probability distribution of p_n');
 xlabel('p_n');
 ylabel('Probability');
 
-%% Task 4b
+ 
+%% Task 4a
 clc; clf; clear all;
 
 data = importdata('MC.txt');
 numlags = 1000;
+corr = autocorr(data, numlags);
 
-% data = importdata('task4b.data');
-% plot(1:length(data), data);
-% 
-% [corr,lags] = xcorr(data);
-% 
-% corr = gather(corr);
-% 
+data = importdata('task4a.data');
+
+figure(1);
+subplot(2,1,1)
+plot(1:length(data), corr(1:length(data)));
+title('Auto-correlation values calculated with autocorr in MatLab');
+xlabel('Step');
+ylabel('Auto-correlation');
+hold on;
+plot(15,corr(15),'r*');
+hold off;
+
+subplot(2,1,2)
+plot(data);
+title('Auto-correlation function evaluated in C');
+xlabel('Step');
+ylabel('Auto-correlation');
+hold on;
+plot(15,data(15),'r*');
+hold off;
+
+%% Task 4b
+clc; clf; clear all;
+
+figure(1);
+data = importdata('task4b.data');
+plot(data(6:end));
+ylabel('Statistical inefficiency (s)');
+xlabel('Block size (B)');
+axis square;
 % corr = autocorr(data, numlags);
-% 
-% subplot(1,1,1)
 % plot(0:numlags,corr);
+

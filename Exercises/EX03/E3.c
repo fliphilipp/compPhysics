@@ -9,7 +9,6 @@
 #include <math.h>
 #include <time.h>
 #include <gsl/gsl_randist.h>
-#include "helper_funcs.h"
 #define PI 3.141592653589
 
 gsl_rng* initialize_rng();
@@ -29,7 +28,7 @@ void one_dim_integral(){
   printf("*******************************************\n");
   printf("*******************TASK 1******************\n");
   printf("*******************************************\n");
-  printf("The expected value of the integral is approx: %.8F\n", (double) 1/6);
+  printf("The expected value of the integral is approx: %.4F\n", (double) 1/6);
   printf("*******************************************\n");
 
   // Run for 10, 10^2, 10^3 and 10^4
@@ -90,7 +89,7 @@ void sine_integral(){
   // Print expected value to compare
   printf("*******************TASK 2******************\n");
   printf("*******************************************\n");
-  printf("The expected value of the integral is approx: %.8F\n", (double) 1/6);
+  printf("The expected value of the integral is approx: %.4F\n", (double) 1/6);
   printf("*******************************************\n");
 
   // Run for 10, 10^2, 10^3 and 10^4
@@ -160,6 +159,8 @@ void metropolis(){
   gsl_rng *my_rng = initialize_rng();
 
   printf("*******************TASK 3******************\n");
+  printf("*******************************************\n");
+  printf("The expected value of the integral is approx: %.4F\n", (double) 7/8);
   printf("*******************************************\n");
 
   // Prepare variables before looping
@@ -311,6 +312,17 @@ void correlation_function(double *array, int array_length){
   printf("Result: %.4f | Error margin: %.4e \n", mean_fi, total_error);
 
   printf("*******************************************\n");
+
+  // Save results in file:
+  FILE *out_file;
+  out_file = fopen("task4a.data", "w");
+
+  for(int x = 0; x < steps; x++){
+    fprintf(out_file, "%F\n", correlation_func[x]);
+  }
+
+  fclose(out_file);
+
 }
 
 // Task 4b
@@ -320,53 +332,67 @@ void block_averaging(double *array, int array_length){
 
   // Declaration and initiation of variables
   int i, j;
-  int block_size = 500;
+  int min_block_size = 5;
+  int max_block_size = 1000;
+  int block_size = max_block_size;
   int nbr_blocks = array_length/block_size;
   double block_means[nbr_blocks];
   double square_block_means[nbr_blocks];
-  double var_f[nbr_blocks], total_error;
-  double mean, square_mean, var_F, s;
-  double new, mean_var_f = 0.0, square_mean_var_f = 0.0;
+  double total_error, var_F;
+  double mean = 0.0, square_mean = 0.0, var_f, s[max_block_size];
+  double new, mean_var_F = 0.0, square_mean_var_F = 0.0;
 
-  // Determine variance for the whole array
+
+  mean = 0.0;
+  square_mean = 0.0;
+  // Determine the variance for the whole array
   for(i = 0; i < array_length; i++){
     mean += array[i] / array_length;
     square_mean += pow(array[i],2) / array_length;
   }
 
-  var_F = square_mean - mean*mean;
-  
-  // Determine average in each block
-  for(i = 0; i < nbr_blocks; i++){
-    
-    block_means[i] = 0.0;
-    square_block_means[i] = 0.0;
-    var_f[i] = 0.0;
-    
-    for(j = 0; j < block_size; j++){
-      block_means[i] += array[( i * block_size + j )] / block_size;
-      square_block_means[i] += pow(array[( i * block_size + j )],2) / block_size;
-    }
-    
-    var_f[i] = square_block_means[i] - pow(block_means[i],2);
+  var_f = square_mean - pow(mean,2);
 
-    mean_var_f += var_f[i] / (block_size * nbr_blocks);
-    square_mean_var_f += pow(var_f[i],2) / (block_size * nbr_blocks);
+  // Calculate statistical inefficiency for all values of block sizes
+  for (int block_size = min_block_size; block_size < max_block_size + 1; ++block_size){
+
+    nbr_blocks = (int) array_length/block_size;
+    double block_means[nbr_blocks];
+    double square_block_means[nbr_blocks];
+    mean_var_F = 0.0;
+    square_mean_var_F = 0.0;
+    var_F = 0.0;
+    
+    // Determine the average in each block
+    for(i = 0; i < nbr_blocks; i++){
+      
+      block_means[i] = 0.0;
+      square_block_means[i] = 0.0;
+
+      for(j = 0; j < block_size; j++){
+        block_means[i] += array[( i * block_size + j )] / block_size;
+        square_block_means[i] += pow(array[( i * block_size + j )],2) / block_size;
+      }
+      
+      var_F += pow(block_means[i] - mean,2) / nbr_blocks;
+    }
+
+
+    s[block_size] = block_size * var_F / var_f;
   }
 
-  s = block_size * var_F / mean_var_f;
-  printf("Statistical inefficiency s = %f\n", s);
+  printf("Statistical inefficiency s = %f\n", s[max_block_size]);
 
-  total_error = sqrt((square_mean_var_f - pow(mean_var_f,2)) / (block_size * s));
-  printf("Result: %.4f | Error margin: %.4e \n", mean, total_error);
+  total_error = pow(var_F,2) / sqrt(max_block_size);
+  printf("Variance from original mean: %.4e \n", var_F);
   printf("*******************************************\n");
 
   // Save results in file:
   FILE *out_file;
   out_file = fopen("task4b.data", "w");
 
-  for(int x = 0; x < nbr_blocks; x++){
-    fprintf(out_file, "%F\n", var_f[x]);
+  for(int x = 0; x < block_size; x++){
+    fprintf(out_file, "%F\n", s[x]);
   }
 
   fclose(out_file);
