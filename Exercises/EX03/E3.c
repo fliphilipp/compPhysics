@@ -35,9 +35,9 @@ void one_dim_integral(){
   // Run for 10, 10^2, 10^3 and 10^4
   for(x = 0; x < 4; x++){
     
-    N = pow(10,x+1);
-    sum = 0;
-    square_sum = 0;
+    N = pow(10, x+1);
+    sum = 0.0;
+    square_sum = 0.0;
 
     // Integrate!
     for(t = 0; t < N; t++){
@@ -47,24 +47,18 @@ void one_dim_integral(){
 
       
       // Calculate the big sum
-      new = x_var[x][t] * (1 - x_var[x][t]);
+      new = x_var[x][t] * (1.0 - x_var[x][t]);
       sum += new;
 
       // Calculate the variance
-      square_sum += pow(new,2);
+      square_sum += pow(new, 2.0);
 
     }
 
-    // Take the average of the big sum
-    avg = sum / N;
-
-    // Calculate the error margin
-    var_avg = square_sum / N;
-    error = (var_avg - pow(avg,2));
-    error = sqrt(error);
+    error = sqrt(square_sum / N - pow(sum / N, 2.0)) / sqrt(N);
 
     // Results!!
-    printf("N = 10^%i | Integral value = %.4F | Error margin = %.4F \n", x+1, avg, error );
+    printf("N = 10^%i | Integral value = %.6F +/- %.6F \n", x+1, sum / N, error );
 
   }
   printf("*******************************************\n");
@@ -87,7 +81,7 @@ void sine_integral(){
 
   // Initialize vars
   int x, t, N;
-  double r, error, sum, avg, var_avg, square_sum, new;
+  double r, error, sum, avg, var_avg, square_sum, new, fx, px;
   // Set x array size to max N
   double x_var[4][10000];
   // random number generator
@@ -116,9 +110,12 @@ void sine_integral(){
       // Integral of sin(PI * r) => -cos(PI * r) / PI
       // Inverse => acos(- PI * r) / PI
       x_var[x][t] = acos(- r) / PI;
+      x_var[x][t] = acos(1.0 - 2.0*r) / PI;
       
       // Calculate the big sum
-      new = (x_var[x][t] * (1 - x_var[x][t])) / acos(-  x_var[x][t]) / PI;
+      fx = x_var[x][t] * (1.0 - x_var[x][t]);
+      px = PI * sin(x_var[x][t] * PI) / 2.0;
+      new = fx / px;
       sum += new;
 
       // Calculate the variance
@@ -126,16 +123,10 @@ void sine_integral(){
 
     }
 
-    // Take the average of the big sum
-    avg = sum / N;
-
-    // Calculate the error margin
-    var_avg = square_sum / N;
-    error = (var_avg - pow(avg,2))/N;
-    error = sqrt(error);
+    error = sqrt(square_sum / N - pow(sum / N, 2.0)) / sqrt(N);
 
     // Results!!
-    printf("N = 10^%i | Integral value = %.4F | Error margin = %.4F \n", x+1, avg, error );
+    printf("N = 10^%i | Integral value = %.6F +/- %.6F \n", x+1, sum / N, error);
 
   }
   printf("*******************************************\n");
