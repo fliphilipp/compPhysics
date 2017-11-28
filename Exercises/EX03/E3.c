@@ -297,13 +297,14 @@ void correlation_function(double *array, int array_length){
   }
 
   // Calculate the time when the function will have decayed by approximately 10%
-  // aka statistical inefficiency
+  // Also calculate the sum of the function values to that point aka relaxation time
   decay_time = 0;
   while(correlation_func[decay_time] >= exp(-2)){
     relaxation_time += correlation_func[decay_time];
     decay_time++;
   }
 
+  // Statistical inefficiency approx is twice the relaxation time 
   stat_ineff = (double) relaxation_time * 2;
 
   printf("Function reaches 10%% of its initial value at time t = %i\n", decay_time);
