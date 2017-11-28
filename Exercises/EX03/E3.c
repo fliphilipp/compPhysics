@@ -143,16 +143,20 @@ void sine_integral(){
 
 void metropolis(){
   // Initialize vars
-  int N = 10000, t=0, x;
+  int N = pow(10,8), t=0, i;
 
-  // Initialize probability of state null to 1
-  // since we will always be there 100% of the time
-  double p_m = 1;
+  // Initialize probability of state null to a low value
+  double p_m = 0.01;
 
-  double x_var[N], y_var[N], z_var[N]; 
-  double p_n[N], sum, square_sum = 0, trial, r;
+  // Allocate memory for big arrays
+  double *x_var = malloc((N) * sizeof(double));
+  double *y_var = malloc((N) * sizeof(double));
+  double *z_var = malloc((N) * sizeof(double));
+  double *p_n = malloc((N) * sizeof(double));
+
+  double sum, square_sum = 0.0, trial, r, ft, px, x, y, z;
   double error, avg, var_avg, new;
-  double delta = 2;
+  double delta = 2.0;
   int total = 0;
 
   // random number generator
@@ -160,52 +164,44 @@ void metropolis(){
 
   printf("*******************TASK 3******************\n");
   printf("*******************************************\n");
-  printf("The expected value of the integral is approx: %.4F\n", (double) 7/8);
-  printf("*******************************************\n");
 
   // Prepare variables before looping
-  x_var[0] = 0;
-  y_var[0] = 0;
-  z_var[0] = 0;
-  p_n[0] = pow(PI,-3/2) * exp(- (pow(x_var[0],2) + pow(y_var[0],2) + pow(z_var[0],2)) );
-  sum = 0;
-  square_sum = 0;
+  x_var[0] = 0.0;
+  y_var[0] = 0.0;
+  z_var[0] = 0.0;
+  x = 0.0;
+  y = 0.0;
+  z = 0.0;
+  p_n[0] = pow(PI,-3.0/2.0) * exp(- (x*x + y*y + z*z));
+  sum = 0.0;
+  square_sum = 0.0;
 
   for(t = 1; t < N; t++){
     
     // Let the trials begin!
 
     // Get random
-    do {
-      r = gsl_rng_uniform(my_rng);
-    } while (r > 1.0); // Just to be safe
-
+    r = gsl_rng_uniform(my_rng);
     // Calculate next value of x for the trial
     x_var[t] =  x_var[t - 1] + delta * (r - 0.5);
 
     // Get random
-    do {
-      r = gsl_rng_uniform(my_rng);
-    } while (r > 1.0); // Just to be safe
+    r = gsl_rng_uniform(my_rng);
     // Calculate next value of y for the trial
     y_var[t] =  y_var[t - 1] + delta * (r - 0.5);
 
     // Get random
-    do {
-      r = gsl_rng_uniform(my_rng);
-    } while (r > 1.0); // Just to be safe
+    r = gsl_rng_uniform(my_rng);
     // Calculate next value of y for the trial
     z_var[t] =  z_var[t - 1] + delta * (r - 0.5);
 
     // Transform through the weight function!
-    p_n[t] = pow(PI,-3/2) * exp(- (pow(x_var[t],2) + pow(y_var[t],2) + pow(z_var[t],2)) );
+    p_n[t] = pow(PI,-3.0/2.0) * exp(- (pow(x_var[t],2) + pow(y_var[t],2) + pow(z_var[t],2)) );
     // Ratio of current state prob over previous state prob
     trial = p_n[t] / p_m;
 
     // Get new random
-    do {
-      r = gsl_rng_uniform(my_rng);
-    } while (r > 1.0); // Just to be safe
+    r = gsl_rng_uniform(my_rng);
 
 
     // Test for the Rejection Method
@@ -221,11 +217,14 @@ void metropolis(){
       // to the one of the current state
       p_m = p_n[t];
     }
+
+    x = x_var[t];
+    y = y_var[t];
+    z = z_var[t];
     
     // Calculate the big sum
-    new = pow(PI,-3/2) * pow(x_var[t],2) + pow(x_var[t],2) * pow(y_var[t],2) \
-          + pow(x_var[t],2) * pow(y_var[t],2) * pow(z_var[t],2) \
-          * exp( - (pow(x_var[t],2) + pow(y_var[t],2) + pow(z_var[t],2)) );
+    ft = pow(PI,-3.0/2.0) * (x*x + x*x * y*y +  x*x * y*y * z*z) * exp( -(x*x + y*y + z*z));
+    new = ft / p_m;
 
     sum += new;
 
@@ -244,7 +243,7 @@ void metropolis(){
   error = sqrt(error);
 
   // Results!!
-  printf("N = %i | Integral value = %.4F | Error margin = %.4F \n", N, avg, error );
+  printf("N = %i | Integral value = %.6F | Error margin = %.6F \n", N, avg, error );
   printf("*******************************************\n");
   printf("Percentage of approved trials = %.1f\n", (double) 100*(((double) N - (double) total) / (double) N) );
   printf("*******************************************\n");
@@ -253,11 +252,15 @@ void metropolis(){
   FILE *out_file;
   out_file = fopen("task3.data", "w");
 
-  for(x = 0; x < N; x++){
-    fprintf(out_file, "%F \t %F \t %F \t %F\n", x_var[x], y_var[x], z_var[x], p_n[x]);
+  for(i = 0; i < 10000; i++){
+    fprintf(out_file, "%F \t %F \t %F \t %F\n", x_var[i], y_var[i], z_var[i], p_n[i]);
   }
 
   fclose(out_file);
+
+  // free memory
+  free(x_var); free(y_var); free(z_var); free(p_n);
+  x_var = NULL; y_var = NULL; z_var = NULL; p_n = NULL;
 }
 
 // Task 4a
