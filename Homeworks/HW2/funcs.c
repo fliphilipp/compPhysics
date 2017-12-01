@@ -18,6 +18,7 @@ gsl_rng* initialize_rng() {
 	return my_rng;
 }
 
+
 // helper function that calculates distance between two particles in 3D
 double dist(double pos[2][3]){
 	double sqDist = 0.0;
@@ -28,6 +29,7 @@ double dist(double pos[2][3]){
 	return sqrt(sqDist);
 }
 
+
 // get the value of the trial wave function specified in Eq. 6 in the assignment
 double wfunc(double pos[2][3], double alpha) {
 	double r1 = sqrt(pow(pos[0][0], 2) + pow(pos[0][1], 2) + pow(pos[0][2], 2));
@@ -37,11 +39,13 @@ double wfunc(double pos[2][3], double alpha) {
 	return psi;
 }
 
+
 // get distances to the nucleus for the two electrons
 void dist_nuc(double pos[2][3], double distNuc[]) {
 	distNuc[0] = sqrt(pow(pos[0][0], 2) + pow(pos[0][1], 2) + pow(pos[0][2], 2));
 	distNuc[1] = sqrt(pow(pos[1][0], 2) + pow(pos[1][1], 2) + pow(pos[1][2], 2));
 }
+
 
 // get the cosine of the angle between the two electrons
 double cosAngle(double pos[2][3]) {
@@ -77,6 +81,7 @@ void autocorr(double *array, int array_length, double *result) {
 	double square_mean_fi = 0.0;
 	double correlation_func[steps];
 	double fik[steps];
+	FILE *file_corrfunc;
 
 	// Array of zeros
 	for (int k = 0; k < steps; ++k){
@@ -97,8 +102,10 @@ void autocorr(double *array, int array_length, double *result) {
 	}
 
 	// Calculate correlation function
+	file_corrfunc = fopen("file-corrfunc.dat","w");
 	for (int k = 0; k < steps; ++k){
 		correlation_func[k] = ( fik[k] - pow(mean_fi,2) ) / ( square_mean_fi - pow(mean_fi,2)); 
+		fprintf(file_corrfunc, "%e\n", correlation_func[k]);
 	}
 
 	// Calculate the time when the function will have decayed by approximately 10%
@@ -107,10 +114,15 @@ void autocorr(double *array, int array_length, double *result) {
 		decay_time++;
 	}
 
+	// write statistical inefficiency to last positon
+	fprintf(file_corrfunc, "%d\n", decay_time);
+	fclose(file_corrfunc);
+
 	result[0] = mean_fi;
 	result[1] = sqrt(decay_time * (square_mean_fi - mean_fi*mean_fi) / array_length);
 	result[2] = decay_time;
 }
+
 
 // get block average for statistical inefficiency
 double blockav(double *array, int array_length) {
@@ -171,56 +183,13 @@ double blockav(double *array, int array_length) {
 		}
 	}
 
+	// write statistical inefficiency to last positon
+	fprintf(file_blockav, "%d\t%e\n", 0, mean_stat_ineff);
 	fclose(file_blockav);
+
 	return(mean_stat_ineff);
 }
 
-
-/*
-	// Declaration and initiation of variables
-	int i, j;
-	int block_size = 500;
-	int nbr_blocks = array_length/block_size;
-	double block_means[nbr_blocks];
-	double square_block_means[nbr_blocks];
-	double var_f[nbr_blocks], total_error;
-	double mean = 0.0, square_mean = 0.0, var_F, s;
-	double mean_var_f = 0.0, square_mean_var_f = 0.0;
-
-	// Determine variance for the whole array
-	for(i = 0; i < array_length; i++){
-		mean += array[i] / array_length;
-		square_mean += pow(array[i],2) / array_length;
-	}
-
-	var_F = square_mean - mean*mean;
-	
-	// Determine average in each block
-	for(i = 0; i < nbr_blocks; i++){
-		
-		block_means[i] = 0.0;
-		square_block_means[i] = 0.0;
-		var_f[i] = 0.0;
-		
-		for(j = 0; j < block_size; j++){
-			block_means[i] += array[( i * block_size + j )] / block_size;
-			square_block_means[i] += pow(array[( i * block_size + j )],2) / block_size;
-		}
-		
-		var_f[i] = square_block_means[i] - pow(block_means[i],2);
-
-		mean_var_f += var_f[i] / (block_size * nbr_blocks);
-		square_mean_var_f += pow(var_f[i],2) / (block_size * nbr_blocks);
-	}
-
-	s = block_size * var_F / mean_var_f;
-	printf("Statistical inefficiency s = %f\n", s);
-
-	total_error = sqrt((square_mean_var_f - pow(mean_var_f,2)) / (block_size * s));
-	printf("Result: %.4f | Error margin: %.4e \n", mean, total_error);
-	printf("*******************************************\n");
-}
-*/
 
 // get gradient of ln(wfunc)
 double grad(double dist, double alpha) {
