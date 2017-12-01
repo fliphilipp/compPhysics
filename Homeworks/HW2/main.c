@@ -33,6 +33,7 @@ int main(){
 	int nAccepted = 0;  // count number of moves that are accepted
 	double result[3]; // for statistical inefficiency calculation
 	double avgLocalE, localEstdev, statIneff;
+	double block_stat_ineff;
 
 	FILE *file_dist_nuc;
 	FILE *file_cosAngle;
@@ -126,11 +127,12 @@ int main(){
 	statIneff = result[2];
 
 	// block averaging DOESN'T WORK YET!!!
-	blockav(localE, tSteps - endEquilibration);
+	block_stat_ineff = blockav(localE, tSteps - endEquilibration);
 
 	printf("Percentage accepted: %.2f%%\n", 100.0 * nAccepted / tSteps);
 	printf("Average local energy: %.3f +/- %.5f\n", result[0], result[1]);
 	printf("Statistical inefficiency from correlation: %d\n", (int) result[2]);
+	printf("Statistical inefficiency from block averaging: %.2f\n", block_stat_ineff);
 
 	// close data files
 	fclose(file_dist_nuc); 

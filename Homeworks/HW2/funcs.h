@@ -12,8 +12,8 @@ extern double wfunc(double [2][3], double);
 extern double cosAngle(double [2][3]);
 extern double grad(double, double);
 extern double rescale(double, double [], double [], double, int, int, double);
+extern double blockav(double *, int);
 extern void dist_nuc(double [2][3], double []);
 extern void autocorr(double *, int, double *);
-extern void blockav(double *, int);
 
 #endif

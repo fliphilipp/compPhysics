@@ -113,7 +113,70 @@ void autocorr(double *array, int array_length, double *result) {
 }
 
 // get block average for statistical inefficiency
-void blockav(double *array, int array_length) {
+double blockav(double *array, int array_length) {
+
+	int i,j;
+	int max_blocksize = 3000;
+	int startAverage = 2000;
+	int stepsize = 10;
+	int blocksize, nblocks;
+	double mean_stat_ineff = 0.0;
+	double stat_ineff;
+	double mean, square_mean;
+	double blockmean;
+	double mean_F, square_mean_F;
+	double var_f, var_F;
+	FILE *file_blockav;
+
+	file_blockav = fopen("file-block_s.dat","w");
+
+	// the variance of all points
+	mean = 0.0;
+	square_mean = 0.0;
+	for(i = 0; i < array_length; i++){
+		mean += array[i] / array_length;
+		square_mean += pow(array[i],2) / array_length;
+	}
+	var_f = square_mean - mean*mean;
+
+	// iterate through different block sizes
+	for (blocksize = 10; blocksize <= max_blocksize; blocksize += stepsize) {
+
+		nblocks = array_length / blocksize;
+
+		// average quantities for the different block sizes
+		mean_F = 0.0;
+		square_mean_F = 0.0;
+
+		// loop through all blocks
+		for (i = 0; i < nblocks; i++) {
+			blockmean = 0.0;
+
+			// for each block, get mean and add to average
+			for (j = 0; j < blocksize; j++) {
+				blockmean += array[i * blocksize + j] / blocksize;
+			}
+
+			mean_F += blockmean / nblocks;
+			square_mean_F += pow(blockmean, 2) / nblocks;
+		}
+
+		var_F = (square_mean_F - pow(mean_F, 2));
+
+		stat_ineff = blocksize * var_F / var_f;
+		fprintf(file_blockav, "%d\t%e\n", blocksize, stat_ineff);
+
+		if (blocksize > startAverage) {
+			mean_stat_ineff += stat_ineff / (max_blocksize - startAverage) * stepsize;
+		}
+	}
+
+	fclose(file_blockav);
+	return(mean_stat_ineff);
+}
+
+
+/*
 	// Declaration and initiation of variables
 	int i, j;
 	int block_size = 500;
@@ -157,6 +220,7 @@ void blockav(double *array, int array_length) {
 	printf("Result: %.4f | Error margin: %.4e \n", mean, total_error);
 	printf("*******************************************\n");
 }
+*/
 
 // get gradient of ln(wfunc)
 double grad(double dist, double alpha) {
