@@ -15,7 +15,7 @@ int main(int argc, char **argv){
     printf("Error: Missing command line arguments!\n");
 		printf("Please select task from 1-5 by appending it as an argument\n");
 		printf("when you run the binary. Usage: ./go [1-5]\n");
-    return 1;
+    return(1);
   }
 
 	// Get which task to run from the system call arguments
@@ -40,7 +40,7 @@ int main(int argc, char **argv){
 	// Boot selected task
 	switch (task) {
 		case 1 :
-			delta = 1.7;
+			delta = 0.9;
 			tSteps = pow(10,6);
 			endEquilibration = pow(10,3);
 			alphaMin = 0.1;
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
 			measureEvery = 1;
 			break;
 		case 2 :
-			delta = 1.7;
+			delta = 0.9;
 			tSteps = pow(10,6);
 			endEquilibration = pow(10,3);
 			alphaMin = 0.1;
@@ -60,9 +60,9 @@ int main(int argc, char **argv){
 			measureEvery = 1;
 			break;
 		case 3 :
-			delta = 1.7;
+			delta = 0.9;
 			tSteps = pow(10,6);
-			endEquilibration = pow(10,4);
+			endEquilibration = pow(10,3);
 			alphaMin = 0.06;
 			alphaMax = 0.25;
 			alphastep = 0.01;
@@ -70,7 +70,7 @@ int main(int argc, char **argv){
 			measureEvery = 40;
 			break;
 		case 4 :
-			delta = 1.7;
+			delta = 0.9;
 			tSteps = 5*pow(10,6);
 			endEquilibration = pow(10,4);
 			alphaStart = pow(10,6);
@@ -82,7 +82,7 @@ int main(int argc, char **argv){
 			beta = 0.95; // run for different values, gives different output files
 			break;
 		case 5 :
-			delta = 1.7;
+			delta = 0.9;
 			tSteps = pow(10,8);
 			endEquilibration = pow(10,4);
 			alphaMin = 0.1486; // this is the optimized value from task 4
@@ -94,7 +94,7 @@ int main(int argc, char **argv){
 		default :
 			printf("Please select task from 1-5 by appending it as an argument\n");
 			printf("when you run the binary. Usage: ./go [1-5]\n");
-			exit(0);
+			return(1);
 	}
 
 	printf("Good choice!\n");
@@ -106,7 +106,7 @@ int main(int argc, char **argv){
 	int nMeas;
 	int alphaMeas;
 	int optimizedAlphaMeas;
-	double rand;  // random double
+	double random;  // random double
 	int randi;  // random integer
 	double pos[2][3];  // positions of the two electrons
 	double nextPos[2][3];  // position potential next state
@@ -228,10 +228,15 @@ int main(int argc, char **argv){
 			for (t=1; t<tSteps; t++) {
 
 				// get potential new position by changing a random coordinate 
-				randi = (int) (6.0 * gsl_rng_uniform(my_rng));
-				whichParticle = randi / 3;
-				whichDim = randi % 3;
-				nextPos[whichParticle][whichDim] = pos[whichParticle][whichDim] + delta * (gsl_rng_uniform(my_rng) - 0.5);
+				// randi = (int) (6.0 * gsl_rng_uniform(my_rng));
+				// whichParticle = randi / 3;
+				// whichDim = randi % 3;
+				// nextPos[whichParticle][whichDim] = pos[whichParticle][whichDim] + delta * (gsl_rng_uniform(my_rng) - 0.5);
+				for (int whichParticle = 0; whichParticle < 2; ++whichParticle){
+					for (int whichDim = 0; whichDim < 3; ++whichDim){
+						nextPos[whichParticle][whichDim] = pos[whichParticle][whichDim] + delta * (gsl_rng_uniform(my_rng) - 0.5);
+					}
+				}
 
 				// get new wave function
 				psi = wfunc(nextPos, thisAlpha);
@@ -242,11 +247,15 @@ int main(int argc, char **argv){
 				// get the ratio between the new and old probabilities
 				probRatio = newProb / prob;
 
-				// accept new state if probRatio > rand
-				rand = gsl_rng_uniform(my_rng);
-				if (probRatio > rand) {
+				// accept new state if probRatio > random
+				random = gsl_rng_uniform(my_rng);
+				if (probRatio > random) {
 					nAccepted ++;
-					pos[whichParticle][whichDim] = nextPos[whichParticle][whichDim];
+					for (int whichParticle = 0; whichParticle < 2; ++whichParticle){
+						for (int whichDim = 0; whichDim < 3; ++whichDim){
+							pos[whichParticle][whichDim] = nextPos[whichParticle][whichDim];
+						}
+					}
 					prob = newProb;
 				}
 
