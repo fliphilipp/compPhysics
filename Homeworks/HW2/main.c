@@ -74,8 +74,8 @@ int main(int argc, char **argv){
 			tSteps = 5*pow(10,6);
 			endEquilibration = pow(10,4);
 			alphaStart = pow(10,6);
-			alphaMin = 0.145;
-			alphaMax = 0.145;
+			alphaMin = 0.10;
+			alphaMax = 0.10;
 			alphastep = 0.1;
 			nSimulations = 100;
 			measureEvery = 40;
@@ -85,8 +85,8 @@ int main(int argc, char **argv){
 			delta = 0.9;
 			tSteps = pow(10,8);
 			endEquilibration = pow(10,4);
-			alphaMin = 0.1486; // this is the optimized value from task 4
-			alphaMax = 0.1486;
+			alphaMin = 0.143; // this is the optimized value from task 4
+			alphaMax = 0.143;
 			alphastep = 0.1;
 			nSimulations = 1;
 			measureEvery = 40;
