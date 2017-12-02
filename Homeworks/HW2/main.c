@@ -383,6 +383,8 @@ int main(int argc, char **argv){
 
 	}// end loop over alpha values
 
+	fclose(file_alpha_Eloc);
+	
 	// free memory
 	free(localE); localE = NULL;
 
