@@ -8,9 +8,12 @@
 #define PI 3.141592653589
 
 // Main program 
-int main(){
+int main(int argc, char **argv){
 
-	int task = 3;  // which task to run
+	// Get which task to run from the system call arguments
+	char *p;
+	int task = strtol(argv[1], &p, 10);
+	printf("Running Task %i\n", task);
 
 	// parameters
 	double alpha;
@@ -24,6 +27,70 @@ int main(){
 	int nSimulations = 20;
 	int measureEvery = 1;
 	int alphaStart = 0;
+	double beta;
+
+	// Boot selected task
+	switch (task) {
+		case 1 :
+			delta = 1.7;
+			tSteps = pow(10,6);
+			endEquilibration = pow(10,3);
+			alphaMin = 0.1;
+			alphaMax = 0.1;
+			alphastep = 0.1;
+			nSimulations = 1;
+			measureEvery = 1;
+			break;
+		case 2 :
+			delta = 1.7;
+			tSteps = pow(10,6);
+			endEquilibration = pow(10,3);
+			alphaMin = 0.1;
+			alphaMax = 0.1;
+			alphastep = 0.1;
+			nSimulations = 1;
+			measureEvery = 1;
+			break;
+		case 3 :
+			delta = 1.7;
+			tSteps = pow(10,6);
+			endEquilibration = pow(10,4);
+			alphaMin = 0.06;
+			alphaMax = 0.25;
+			alphastep = 0.01;
+			nSimulations = 100;
+			measureEvery = 40;
+			break;
+		case 4 :
+			delta = 1.7;
+			tSteps = 5*pow(10,6);
+			endEquilibration = pow(10,4);
+			alphaStart = pow(10,6);
+			alphaMin = 0.145;
+			alphaMax = 0.145;
+			alphastep = 0.1;
+			nSimulations = 100;
+			measureEvery = 40;
+			beta = 0.95; // run for different values, gives different output files
+			break;
+		case 5 :
+			delta = 1.7;
+			tSteps = pow(10,8);
+			endEquilibration = pow(10,4);
+			alphaMin = 0.1486; // this is the optimized value from task 4
+			alphaMax = 0.1486;
+			alphastep = 0.1;
+			nSimulations = 1;
+			measureEvery = 40;
+			break;
+		default :
+			printf("Please select task from 1-5 by appending it as an argument\n");
+			printf("when you run the binary. Usage: ./go [1-5]\n");
+			exit(0);
+	}
+
+	printf("Good choice!\n");
+
 
 	// initialize variables
 	int i, t;  // iterator variables
@@ -50,7 +117,6 @@ int main(){
 	double lapLogWFunc;
 	double sumE_L, sumLapLogWFunc, theProductSum;
 	double currentMeanE_L, currentMeanLapLogWFunc, theProductMean;
-	double beta;
 	double gamma;
 	char filename[80];
 	double alphaSum;
@@ -66,54 +132,6 @@ int main(){
 	// initialize random number generator
 	gsl_rng *my_rng = initialize_rng(); 
 
-	if (task == 1) {
-		delta = 1.7;
-		tSteps = pow(10,6);
-		endEquilibration = pow(10,4);
-		alphaMin = 0.1;
-		alphaMax = 0.1;
-		alphastep = 0.1;
-		nSimulations = 1;
-		measureEvery = 1;
-	} else if (task == 2) {
-		delta = 1.7;
-		tSteps = pow(10,6);
-		endEquilibration = pow(10,3);
-		alphaMin = 0.1;
-		alphaMax = 0.1;
-		alphastep = 0.1;
-		nSimulations = 1;
-		measureEvery = 1;
-	} else if (task == 3) {
-		delta = 1.7;
-		tSteps = pow(10,6);
-		endEquilibration = pow(10,3);
-		alphaMin = 0.05;
-		alphaMax = 0.7;
-		alphastep = 0.05;
-		nSimulations = 20;
-		measureEvery = 40;
-	} else if (task == 4) {
-		delta = 1.7;
-		tSteps = 5*pow(10,6);
-		endEquilibration = pow(10,3);
-		alphaStart = pow(10,6);
-		alphaMin = 0.145;
-		alphaMax = 0.145;
-		alphastep = 0.1;
-		nSimulations = 1000;
-		measureEvery = 40;
-		beta = 0.95; // run for different values, gives different output files
-	} else if (task == 5) {
-		delta = 1.7;
-		tSteps = pow(10,8);
-		endEquilibration = pow(10,3);
-		alphaMin = 0.1486; // this is the optimized value from task 4
-		alphaMax = 0.1486;
-		alphastep = 0.1;
-		nSimulations = 1;
-		measureEvery = 40;
-	}
 
 	int nMeasurements = (tSteps - endEquilibration) / measureEvery;
 
@@ -167,9 +185,9 @@ int main(){
 			pos[0][0] = 2.0 * gsl_rng_uniform(my_rng) - 1.0;
 			pos[0][1] = 2.0 * gsl_rng_uniform(my_rng) - 1.0;
 			pos[0][2] = 2.0 * gsl_rng_uniform(my_rng) - 1.0;
-			pos[1][0] = 2.0 * gsl_rng_uniform(my_rng) - 1.0;
-			pos[1][1] = 2.0 * gsl_rng_uniform(my_rng) - 1.0;
-			pos[1][2] = 2.0 * gsl_rng_uniform(my_rng) - 1.0;
+			pos[1][0] = - 2.0 * gsl_rng_uniform(my_rng) - 1.0;
+			pos[1][1] = - 2.0 * gsl_rng_uniform(my_rng) - 1.0;
+			pos[1][2] = - 2.0 * gsl_rng_uniform(my_rng) - 1.0;
 
 			// initialize possible next positions
 			for (i=0; i<3; i++) {
@@ -305,13 +323,14 @@ int main(){
 				printf("Statistical inefficiency from block averaging: %.2f\n", block_stat_ineff);
 			}
 
-			// print results for each alpha, and for each simulation
-			if (task == 3) {
-				printf("alpha = %.3f,   sim:%2d,   E_loc = %.3f +/- %.5f\n", thisAlpha, iSim, meanLocalE, stdevLocalE);
-			}
 
 			simMeanLocalE += meanLocalE / nSimulations;
 			simStdevLocalE += stdevLocalE / nSimulations / sqrt(nSimulations);
+
+			// print results for each alpha, and for each simulation
+			// if (task == 3) {
+			// 	printf("alpha = %.3f,   sim:%2d,   E_loc = %.3f +/- %.5f\n", thisAlpha, iSim, meanLocalE, stdevLocalE);
+			// }
 
 			// close data files
 			if (task < 3) {
@@ -351,5 +370,6 @@ int main(){
 	free(localE); localE = NULL;
 
 	printf("\n");
+	return 0; // Indicator that everything went well.
 }// end main
 
