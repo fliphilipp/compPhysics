@@ -10,6 +10,14 @@
 // Main program 
 int main(int argc, char **argv){
 
+	// Error if no argument given
+	if (argc < 2) {
+    printf("Error: Missing command line arguments!\n");
+		printf("Please select task from 1-5 by appending it as an argument\n");
+		printf("when you run the binary. Usage: ./go [1-5]\n");
+    return 1;
+  }
+
 	// Get which task to run from the system call arguments
 	char *p;
 	int task = strtol(argv[1], &p, 10);
