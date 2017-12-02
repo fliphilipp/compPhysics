@@ -12,6 +12,8 @@ https://www.sharelatex.com/4262861825mmndhmccjsxt
 
 ![task2blockaveraging](https://github.com/Lef-F/ComPhy/blob/master/Homeworks/HW2/plots/fig-blockav.png "Task2 block averaging")
 
+![task3energyvstime](https://github.com/Lef-F/ComPhy/blob/master/Homeworks/HW2/plots/fig-locEn.png "Task3 energy vs. time")
+
 ![task3energyvsalpha](https://github.com/Lef-F/ComPhy/blob/master/Homeworks/HW2/plots/fig-different-alpha.png "Task3 energy vs. alpha")
 
 ![task4](https://github.com/Lef-F/ComPhy/blob/master/Homeworks/HW2/fig-alpha-optimization.png "Task4 alpha/beta optimization")
