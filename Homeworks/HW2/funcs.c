@@ -190,14 +190,9 @@ double blockav(double *array, int array_length) {
 	return(mean_stat_ineff);
 }
 
-
 // get gradient of ln(wfunc)
-double grad(double dist, double alpha) {
-	return 0.0;
-}
-
-// rescale the alpha
-double rescale(double alpha, double energy_l[], double grad_ln_wave[], double distance, int iteration, int start_average, double beta) {
-	return 0.0;
+double laplogwfunc(double dist, double alpha) {
+	double laplaceLnWfunc = - 0.5 * pow(dist / (1 + alpha * dist), 2);
+	return laplaceLnWfunc;
 }
 
