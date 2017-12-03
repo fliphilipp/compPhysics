@@ -15,8 +15,9 @@ gsl_rng* initialize_rng();
 void task2(){
 
 	// Define and initialize variables
-	int steps = pow(10,5);
-	int nbr_trajectories = 5;
+	int steps = pow(10,4);
+	int nbr_trajectories = 5; // 5 trajectories requested from the task
+	int nbr_trajectories_to_avg = pow(10,3); // trajectories to average
 	double dt = 0.01; // Timestep
 	double t[2];
 	double x[steps][nbr_trajectories], v[steps][nbr_trajectories];
@@ -108,11 +109,10 @@ void task2(){
         											+ v_th * sqrt(1 - c0) * G2;
 
 			}
-			// printf("a: %e v_temp: %e x: %e\n", a, v_temp, x[steps][trajectory]);
-
+			printf("last x: %e last v: %e\n", x[steps-1][trajectory], v[steps-1][trajectory]);
 		}
 
-		// Save A
+		// Save
 		switch(i) {
 			case 0 :
 				for (int step = 0; step < steps; ++step){
@@ -137,6 +137,89 @@ void task2(){
 	fclose(trajAv);
 	fclose(trajBx);
 	fclose(trajBv);
+
+	
+	/////////////////////////////////////////////////////////////
+	// Run for multiple trajectories
+	// Basically a copy/paste of the above code, but not really..
+	/////////////////////////////////////////////////////////////
+	double x_avg[steps], v_avg[steps];
+	double x_square[steps], v_square[steps];
+	double x_variance, v_variance;
+	double x_mul[steps], v_mul[steps]; // Use one dimentional arrays for this task for x and v
+
+	x_mul[0] = 0.1;
+	v_mul[0] = 2.0;
+	x_avg[0] = x_mul[0];
+	v_avg[0] = v_mul[0];
+
+	// Open files for writing
+	FILE *trajA_Average;
+	FILE *trajB_Average;
+	trajA_Average = fopen("trajA_Average.data","w");
+	trajB_Average = fopen("trajB_Average.data","w");
+
+	// Loop for the two relaxation times
+	for (int i = 0; i < 2; ++i){
+		// Calculate parameters
+		eta = 1.0/t[i];
+		c0 = exp(- eta * dt);
+
+		for (int trajectory = 0; trajectory < nbr_trajectories_to_avg; ++trajectory){
+
+			for (int step = 1; step < steps; ++step){
+
+				// Get random samples
+		    rand1 = gsl_rng_uniform(my_rng);
+		    rand2 = gsl_rng_uniform(my_rng);
+
+		    // Use Bow-Muller transform to get values from normal distribution
+		    // Recommended on: https://stackoverflow.com/questions/2325472/generate-random-numbers-following-a-normal-distribution-in-c-c
+		    G1 = sqrt(-2.0 * log(rand1)) * cos(2.0 * PI * rand1);
+		    G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
+
+		    // Particle acceleration 
+		    // https://en.wikipedia.org/wiki/Particle_acceleration
+		    a = - pow(freq,2.0) * x_mul[step - 1];
+
+		    // Temporary velocity t + 1
+		    v_temp = (1.0 / 2.0) * a * dt + sqrt(c0) * v_mul[step - 1] \
+		    											+ v_th * sqrt(1 - c0) * G1;
+
+		    // Position x + 1
+        x_mul[step] = x_mul[step - 1] + v_temp * dt;
+
+        // New particle acceleration
+        a = - pow(freq,2.0) * x_mul[step];
+
+        // Final velocity t + 1
+        v_mul[step] = (1.0 / 2.0) * sqrt(c0) * a * dt + sqrt(c0) * v_temp \
+        											+ v_th * sqrt(1 - c0) * G2;
+
+        // Get averages and variance
+        x_avg[step] += x_mul[step] / nbr_trajectories_to_avg;
+        v_avg[step] += v_mul[step] / nbr_trajectories_to_avg;
+        x_square[step] += pow(x_avg[step], 2.0) / nbr_trajectories_to_avg;
+        v_square[step] += pow(v_avg[step], 2.0) / nbr_trajectories_to_avg;
+			}
+		}
+			
+		// Export values from averages
+		for (int step = 0; step < steps; ++step){
+			// Compute variance for x and v
+			x_variance = sqrt(x_avg[step] - x_square[step]);
+			v_variance = sqrt(v_avg[step] - v_square[step]);
+			if( i == 0 ){
+				fprintf(trajA_Average, "%e \t %e \t %e \t %e\n", x_avg[step], x_variance, v_avg[step], v_variance);
+			} else if ( i == 1 ){
+				fprintf(trajB_Average, "%e \t %e \t %e \t %e\n", x_avg[step], x_variance, v_avg[step], v_variance);
+			}
+		}
+	}
+	// Save & close
+	fclose(trajA_Average);
+	fclose(trajB_Average);
+
 }
 
 void task3(){

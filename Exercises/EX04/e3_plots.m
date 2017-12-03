@@ -7,66 +7,74 @@ data_Av = importdata('trajAv.data');
 data_Bx = importdata('trajBx.data');
 data_Bv = importdata('trajBv.data');
 
+% rows = length(data_Ax);
+rows = 1000;
+
 % RELAXATION TIME A
 figure(1);
-subplot(2,5,1)
-plot(data_Ax(:,1))
+subplot(2,2,1)
+plot(1:rows, data_Ax(1:rows,1),1:rows, data_Ax(1:rows,2),1:rows, data_Ax(1:rows,3),1:rows, data_Ax(1:rows,4),1:rows, data_Ax(1:rows,5))
+title('Positions for relaxation time \tau = 48.5 \mus')
+xlabel('Steps')
+ylabel('x \mum')
 
-subplot(2,5,2)
-plot(data_Ax(:,2))
-
-subplot(2,5,3)
-plot(data_Ax(:,3))
-
-subplot(2,5,4)
-plot(data_Ax(:,4))
-
-subplot(2,5,5)
-plot(data_Ax(:,5))
-
-subplot(2,5,6)
-plot(data_Av(:,1))
-
-subplot(2,5,7)
-plot(data_Av(:,2))
-
-subplot(2,5,8)
-plot(data_Av(:,3))
-
-subplot(2,5,9)
-plot(data_Av(:,4))
-
-subplot(2,5,10)
-plot(data_Av(:,5))
+subplot(2,2,2)
+plot(1:rows, data_Av(1:rows,1),1:rows, data_Av(1:rows,2),1:rows, data_Av(1:rows,3),1:rows, data_Av(1:rows,4),1:rows, data_Av(1:rows,5))
+title('Velocities for relaxation time \tau = 48.5 \mus')
+xlabel('Steps')
+ylabel('v \mum/ms')
 
 % RELAXATION TIME B
+subplot(2,2,3)
+plot(1:rows, data_Bx(1:rows,1),1:rows, data_Bx(1:rows,2),1:rows, data_Bx(1:rows,3),1:rows, data_Bx(1:rows,4),1:rows, data_Bx(1:rows,5))
+title('Positions for relaxation time \tau = 147.3 \mus')
+xlabel('Steps')
+ylabel('x \mum')
+
+subplot(2,2,4)
+plot(1:rows, data_Bv(1:rows,1),1:rows, data_Bv(1:rows,2),1:rows, data_Bv(1:rows,3),1:rows, data_Bv(1:rows,4),1:rows, data_Bv(1:rows,5))
+title('Velocities for relaxation time \tau = 147.3 \mus')
+xlabel('Steps')
+ylabel('v \mum/ms')
+
+% FOR AVERAGING
+data_A = importdata('trajA_Average.data');
+data_B = importdata('trajB_Average.data');
+
+% rows = length(data_A);
+% rows = 1000;
+
+% RELAXATION TIME A
 figure(2);
-subplot(2,5,1)
-plot(data_Bx(:,1))
+subplot(2,2,1)
+std_p = data_A(1:rows,1) + data_A(1:rows,2);
+std_m = data_A(1:rows,1) - data_A(1:rows,2);
+plot(1:rows, data_A(1:rows,1), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
+title('Averaged positions for relaxation time \tau = 48.5 \mus')
+xlabel('Steps')
+ylabel('x \mum')
 
-subplot(2,5,2)
-plot(data_Bx(:,2))
+subplot(2,2,2)
+std_p = data_A(1:rows,3) + data_A(1:rows,4);
+std_m = data_A(1:rows,3) - data_A(1:rows,4);
+plot(1:rows, data_A(1:rows,3), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
+title('Averaged velocities for relaxation time \tau = 48.5 \mus')
+xlabel('Steps')
+ylabel('v \mum/ms')
 
-subplot(2,5,3)
-plot(data_Bx(:,3))
+% RELAXATION TIME B
+subplot(2,2,3)
+std_p = data_B(1:rows,1) + data_B(1:rows,2);
+std_m = data_B(1:rows,1) - data_B(1:rows,2);
+plot(1:rows, data_B(1:rows,2), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
+title('Averaged positions for relaxation time \tau = 147.3 \mus')
+xlabel('Steps')
+ylabel('x \mum')
 
-subplot(2,5,4)
-plot(data_Bx(:,4))
-
-subplot(2,5,5)
-plot(data_Bx(:,5))
-
-subplot(2,5,6)
-plot(data_Bv(:,1))
-
-subplot(2,5,7)
-plot(data_Bv(:,2))
-
-subplot(2,5,8)
-plot(data_Bv(:,3))
-
-subplot(2,5,9)
-plot(data_Bv(:,4))
-
-subplot(2,5,10)
-plot(data_Bv(:,5))
+subplot(2,2,4)
+std_p = data_B(1:rows,3) + data_B(1:rows,4);
+std_m = data_B(1:rows,3) - data_B(1:rows,4);
+plot(1:rows, data_B(1:rows,3), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
+title('Averaged velocities for relaxation time \tau = 147.3 \mus')
+xlabel('Steps')
+ylabel('v \mum/ms')
