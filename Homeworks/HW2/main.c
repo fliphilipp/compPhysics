@@ -75,11 +75,11 @@ int main(int argc, char **argv){
 			endEquilibration = pow(10,4);
 			alphaStart = pow(10,6);
 			alphaMin = 0.10;
-			alphaMax = 0.10;
-			alphastep = 0.1;
-			nSimulations = 100;
+			alphaMax = 0.20;
+			alphastep = 0.01;
+			nSimulations = 10;
 			measureEvery = 40;
-			beta = 0.95; // run for different values, gives different output files
+			beta = 0.99; // run for different values, gives different output files
 			break;
 		case 5 :
 			delta = 0.9;
@@ -147,6 +147,8 @@ int main(int argc, char **argv){
 	double *localE = malloc((tSteps - endEquilibration) * sizeof(double));
 
 	file_alpha_Eloc = fopen("file-alpha-eloc.dat","w");
+	fclose(file_alpha_Eloc); // Empty the file first
+	file_alpha_Eloc = fopen("file-alpha-eloc.dat","a"); // Append
 	file_optimizedalphas = fopen("file-optimized-alphas.dat","w");
 
 	// loop through multiple values of alpha
@@ -368,6 +370,10 @@ int main(int argc, char **argv){
 					optimizedAlphaMeas ++;
 				}
 			}
+
+			// write
+			fprintf(file_alpha_Eloc, "%e\t%e\t%e\t%e\n", thisAlpha, simMeanLocalE, simMeanLocalE - simStdevLocalE, simMeanLocalE + simStdevLocalE);
+
 		}// end multiple independent runs
 
 		if (task == 3) {
@@ -378,13 +384,12 @@ int main(int argc, char **argv){
 			printf("Mean optimized alpha: %.10f\n", sumOptimizedAlpha / optimizedAlphaMeas);
 		}
 
-		// write
-		fprintf(file_alpha_Eloc, "%e\t%e\t%e\t%e\n", thisAlpha, simMeanLocalE, simMeanLocalE - simStdevLocalE, simMeanLocalE + simStdevLocalE);
 
 	}// end loop over alpha values
 
 	fclose(file_alpha_Eloc);
-	
+	fclose(file_optimizedalphas);
+
 	// free memory
 	free(localE); localE = NULL;
 
