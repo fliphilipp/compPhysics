@@ -3,11 +3,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 #include <gsl/gsl_randist.h>
 #define PI 3.141592653589
 // Boltzmann constant from Wikipedia
 // Units: [Joule / Kelvin]
 #define kB (1.3806488 * pow(10,-23))
+#define dt 0.1 // Timestep
 
 
 gsl_rng* initialize_rng();
@@ -18,7 +20,6 @@ void task2(){
 	int steps = pow(10,4);
 	int nbr_trajectories = 5; // 5 trajectories requested from the task
 	int nbr_trajectories_to_avg = pow(10,2); // trajectories to average
-	double dt = 0.001; // Timestep
 	double t[2];
 	double x[steps][nbr_trajectories], v[steps][nbr_trajectories];
 	// random number generator
@@ -43,15 +44,16 @@ void task2(){
 	double v_th = sqrt(kB * T / m);
 	printf("v_th: %.20f\n", v_th);
 
+	// The two relaxtation times considered in this problem
+	t[0] = 48.5;
+	t[1] = 147.3;
+
 	// Set initial conditions for the trajectories
 	for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
 		x[0][trajectory] = 0.1;
 		v[0][trajectory] = 2.0;	
 	}
 
-	// The two relaxtation times considered in this problem
-	t[0] = 48.5 * dt; // Scale time
-	t[1] = 147.3 * dt;
 
 	// Open files for writing
 	FILE *trajAx;
@@ -219,17 +221,128 @@ void task2(){
 
 }
 
-void task3(){
+void task3(int time_i){
+
+	// Define and initialize variables
+	int steps = pow(10,4);
+	int nbr_trajectories = pow(10,3); // trajectories to bin
+	double t[2];
+	double x, v;
+	double X[nbr_trajectories][2], V[nbr_trajectories][2];
+	// random number generator
+	gsl_rng *my_rng = initialize_rng();
+	double rand1, rand2, G1, G2, v_temp;
+	double c0, eta, a;
+	double T = 297.0; // Kelvin
+	double f_0 = 3.0; // Vibrational frequency for the Brownian particle
+	double omega = 2 * PI * f_0; // Converting vibrational frequency to angular, for Brownian particle
+
+	double m;
+	double diameter = 2.79; // Units: [micrometers]
+	double density = 2.65; // Units: [grams / cm^3]
+	// Calculate volume of sphere. Units: [micrometers^3]
+	double volume = (4.0 / 3.0) * PI * pow(diameter / 2.0, 3.0);
+	// Calculate mass of particle. Units: [grams]
+	m = density * pow(10.0, -4.0) * volume; // Multiply by 10^-4 for um -> cm
+	m = m * pow(10.0, -4.0); // To convert from grams to kilos
+	printf("Particle mass: %e\n", m);
+
+	// Calculate v_th value
+	double v_th = sqrt(kB * T / m);
+	printf("v_th: %.20f\n", v_th);
+
+	// The two relaxtation times considered in this problem
+	t[0] = 48.5; // Scale time
+	t[1] = 147.3;
+
+	
+	x = 0.1;
+	v = 2.0;
+
+	// Open files for writing
+	FILE *task3;
+	task3 = fopen("task3.data","w");
+
+	// Loop for the two relaxation times
+	for (int i = 0; i < 2; ++i){
+		// Calculate parameters
+		eta = 1.0/t[i];
+		c0 = exp(- eta * dt);
+
+		for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
+				
+				// Particle acceleration 
+		    // https://en.wikipedia.org/wiki/Particle_acceleration
+		    a = - pow(omega,2.0) * x;
+			
+			for (int step = 1; step < steps; ++step){
+
+				// Get random samples
+		    rand1 = gsl_rng_uniform(my_rng);
+
+		    // Use Bow-Muller transform to get values from normal distribution
+		    // Recommended on: https://stackoverflow.com/questions/2325472/generate-random-numbers-following-a-normal-distribution-in-c-c
+		    G1 = sqrt(-2.0 * log(rand1)) * cos(2.0 * PI * rand1);
+
+		    // Temporary velocity t + 1
+		    v_temp = (1.0 / 2.0) * a * dt + sqrt(c0) * v \
+		    											+ v_th * sqrt(1 - c0) * G1;
+
+		    // Position x + 1
+        x = x + v_temp * dt;
+
+        // New particle acceleration
+        a = - pow(omega,2.0) * x;
+
+        // Get new random sample
+        rand2 = gsl_rng_uniform(my_rng);
+        G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
+
+        // Final velocity t + 1
+        v = (1.0 / 2.0) * sqrt(c0) * a * dt + sqrt(c0) * v_temp \
+        											+ v_th * sqrt(1 - c0) * G2;
+
+
+        if(step == (time_i * dt)){
+        	X[trajectory][i] = x;
+        	V[trajectory][i] = v;
+         	break;
+        }
+			}
+		}		
+	}
+
+	// Save & close
+	for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
+		fprintf(task3, "%.20f \t %.20f \t %.20f \t %.20f\n", X[trajectory][0], V[trajectory][0], X[trajectory][1], V[trajectory][1]);
+	}
+	fclose(task3);
 
 }
 
 int main(int argc, char const *argv[]){
 
+	// Error if no argument given
+	if (argc < 2) {
+    printf("Error: Missing command line arguments!\n");
+		printf("Please select sampling time for task 3 in microseconds by appending it\n");
+		printf("as an argument when you run the binary. Usage: ./go [0-9999+]\n");
+    return(1);
+  }
+
+
 	// Run task 2
+	printf("\nRunning Task 2...\n");
 	task2();
 
+	// Get which task to run from the system call arguments
+	char *p;
+	int time_i = strtol(argv[1], &p, 10);
+
 	// Run task 3
-	task3();
+	printf("\nRunning Task 3...\n");
+	printf("Sampling time: %i microsec\n", time_i);
+	task3(time_i);
 
 	return 0;
 }
