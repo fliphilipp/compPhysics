@@ -1,14 +1,16 @@
 %% Task 2
 clc; clf; clear all;
 
-data_Ax = importdata('trajAx.data');
-data_Av = importdata('trajAv.data');
+format long g
 
-data_Bx = importdata('trajBx.data');
-data_Bv = importdata('trajBv.data');
+data_Ax = dlmread('trajAx.data');
+data_Av = dlmread('trajAv.data');
+
+data_Bx = dlmread('trajBx.data');
+data_Bv = dlmread('trajBv.data');
 
 % rows = length(data_Ax);
-rows = 1000;
+rows = 5000;
 
 % RELAXATION TIME A
 figure(1);
@@ -78,3 +80,5 @@ plot(1:rows, data_B(1:rows,3), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
 title('Averaged velocities for relaxation time \tau = 147.3 \mus')
 xlabel('Steps')
 ylabel('v \mum/ms')
+
+format short

@@ -17,18 +17,17 @@ void task2(){
 	// Define and initialize variables
 	int steps = pow(10,4);
 	int nbr_trajectories = 5; // 5 trajectories requested from the task
-	int nbr_trajectories_to_avg = pow(10,3); // trajectories to average
-	double dt = 0.01; // Timestep
+	int nbr_trajectories_to_avg = pow(10,2); // trajectories to average
+	double dt = 0.001; // Timestep
 	double t[2];
 	double x[steps][nbr_trajectories], v[steps][nbr_trajectories];
-	int f_0 = 3; // Vibrational frequency for the Brownian particle
 	// random number generator
 	gsl_rng *my_rng = initialize_rng();
 	double rand1, rand2, G1, G2, v_temp;
 	double c0, eta, a;
 	double T = 297.0; // Kelvin
-	double freq = 3.0; // Vibrational frequency for Brownian particle
-	
+	double f_0 = 3.0; // Vibrational frequency for the Brownian particle
+	double omega = 2 * PI * f_0; // Converting vibrational frequency to angular, for Brownian particle
 
 	double m;
 	double diameter = 2.79; // Units: [micrometers]
@@ -42,7 +41,7 @@ void task2(){
 
 	// Calculate v_th value
 	double v_th = sqrt(kB * T / m);
-	printf("v_th: %e\n", v_th);
+	printf("v_th: %.20f\n", v_th);
 
 	// Set initial conditions for the trajectories
 	for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
@@ -51,8 +50,8 @@ void task2(){
 	}
 
 	// The two relaxtation times considered in this problem
-	t[0] = 48.5;
-	t[1] = 147.3; 
+	t[0] = 48.5 * dt; // Scale time
+	t[1] = 147.3 * dt;
 
 	// Open files for writing
 	FILE *trajAx;
@@ -64,35 +63,27 @@ void task2(){
 	trajBx = fopen("trajBx.data","w");
 	trajBv = fopen("trajBv.data","w");
 
-	// Save initial values
-	fprintf(trajAx, "%e \t %e \t %e \t %e \t %e\n", x[0][0], x[0][1], x[0][2], x[0][3], x[0][4]);
-	fprintf(trajAv, "%e \t %e \t %e \t %e \t %e\n", v[0][0], v[0][1], v[0][2], v[0][3], v[0][4]);
-	fprintf(trajBx, "%e \t %e \t %e \t %e \t %e\n", x[0][0], x[0][1], x[0][2], x[0][3], x[0][4]);
-	fprintf(trajBv, "%e \t %e \t %e \t %e \t %e\n", v[0][0], v[0][1], v[0][2], v[0][3], v[0][4]);
-
 	// Loop for the two relaxation times
 	for (int i = 0; i < 2; ++i){
 		// Calculate parameters
-		eta = 1.0/t[i];
+		eta = 1.0 / t[i];
 		c0 = exp(- eta * dt);
-		printf("c0: %e\n", c0);
+		printf("c0: %.20f\n", c0);
 
 		for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
+
+			// Particle acceleration 
+	    // https://en.wikipedia.org/wiki/Particle_acceleration
+	    a = - pow(omega,2.0) * x[0][trajectory];
 
 			for (int step = 1; step < steps; ++step){
 
 				// Get random samples
 		    rand1 = gsl_rng_uniform(my_rng);
-		    rand2 = gsl_rng_uniform(my_rng);
 
 		    // Use Bow-Muller transform to get values from normal distribution
 		    // Recommended on: https://stackoverflow.com/questions/2325472/generate-random-numbers-following-a-normal-distribution-in-c-c
 		    G1 = sqrt(-2.0 * log(rand1)) * cos(2.0 * PI * rand1);
-		    G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
-
-		    // Particle acceleration 
-		    // https://en.wikipedia.org/wiki/Particle_acceleration
-		    a = - pow(freq,2.0) * x[step - 1][trajectory];
 
 		    // Temporary velocity t + 1
 		    v_temp = (1.0 / 2.0) * a * dt + sqrt(c0) * v[step - 1][trajectory] \
@@ -102,28 +93,32 @@ void task2(){
         x[step][trajectory] = x[step - 1][trajectory] + v_temp * dt;
 
         // New particle acceleration
-        a = - pow(freq,2.0) * x[step][trajectory];
+        a = - pow(omega,2.0) * x[step][trajectory];
+
+        // Get new random sample
+        rand2 = gsl_rng_uniform(my_rng);
+        G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
 
         // Final velocity t + 1
         v[step][trajectory] = (1.0 / 2.0) * sqrt(c0) * a * dt + sqrt(c0) * v_temp \
         											+ v_th * sqrt(1 - c0) * G2;
 
 			}
-			printf("last x: %e last v: %e\n", x[steps-1][trajectory], v[steps-1][trajectory]);
+			printf("last x: %.20f last v: %.20f\n", x[steps-1][trajectory], v[steps-1][trajectory]);
 		}
 
 		// Save
 		switch(i) {
 			case 0 :
 				for (int step = 0; step < steps; ++step){
-					fprintf(trajAx, "%e \t %e \t %e \t %e \t %e\n", x[step][0], x[step][1], x[step][2], x[step][3], x[step][4]);
-					fprintf(trajAv, "%e \t %e \t %e \t %e \t %e\n", v[step][0], v[step][1], v[step][2], v[step][3], v[step][4]);
+					fprintf(trajAx, "%.20f \t %.20f \t %.20f \t %.20f \t %.20f\n", x[step][0], x[step][1], x[step][2], x[step][3], x[step][4]);
+					fprintf(trajAv, "%.20f \t %.20f \t %.20f \t %.20f \t %.20f\n", v[step][0], v[step][1], v[step][2], v[step][3], v[step][4]);
 				}
 				break;
 			case 1 :
 				for (int step = 0; step < steps; ++step){
-					fprintf(trajBx, "%e \t %e \t %e \t %e \t %e\n", x[step][0], x[step][1], x[step][2], x[step][3], x[step][4]);
-					fprintf(trajBv, "%e \t %e \t %e \t %e \t %e\n", v[step][0], v[step][1], v[step][2], v[step][3], v[step][4]);
+					fprintf(trajBx, "%.20f \t %.20f \t %.20f \t %.20f \t %.20f\n", x[step][0], x[step][1], x[step][2], x[step][3], x[step][4]);
+					fprintf(trajBv, "%.20f \t %.20f \t %.20f \t %.20f \t %.20f\n", v[step][0], v[step][1], v[step][2], v[step][3], v[step][4]);
 				}
 				break;
 			default :
@@ -166,21 +161,19 @@ void task2(){
 		c0 = exp(- eta * dt);
 
 		for (int trajectory = 0; trajectory < nbr_trajectories_to_avg; ++trajectory){
-
+				
+				// Particle acceleration 
+		    // https://en.wikipedia.org/wiki/Particle_acceleration
+		    a = - pow(omega,2.0) * x_mul[0];
+			
 			for (int step = 1; step < steps; ++step){
 
 				// Get random samples
 		    rand1 = gsl_rng_uniform(my_rng);
-		    rand2 = gsl_rng_uniform(my_rng);
 
 		    // Use Bow-Muller transform to get values from normal distribution
 		    // Recommended on: https://stackoverflow.com/questions/2325472/generate-random-numbers-following-a-normal-distribution-in-c-c
 		    G1 = sqrt(-2.0 * log(rand1)) * cos(2.0 * PI * rand1);
-		    G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
-
-		    // Particle acceleration 
-		    // https://en.wikipedia.org/wiki/Particle_acceleration
-		    a = - pow(freq,2.0) * x_mul[step - 1];
 
 		    // Temporary velocity t + 1
 		    v_temp = (1.0 / 2.0) * a * dt + sqrt(c0) * v_mul[step - 1] \
@@ -190,7 +183,11 @@ void task2(){
         x_mul[step] = x_mul[step - 1] + v_temp * dt;
 
         // New particle acceleration
-        a = - pow(freq,2.0) * x_mul[step];
+        a = - pow(omega,2.0) * x_mul[step];
+
+        // Get new random sample
+        rand2 = gsl_rng_uniform(my_rng);
+        G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
 
         // Final velocity t + 1
         v_mul[step] = (1.0 / 2.0) * sqrt(c0) * a * dt + sqrt(c0) * v_temp \
@@ -210,9 +207,9 @@ void task2(){
 			x_variance = sqrt(x_avg[step] - x_square[step]);
 			v_variance = sqrt(v_avg[step] - v_square[step]);
 			if( i == 0 ){
-				fprintf(trajA_Average, "%e \t %e \t %e \t %e\n", x_avg[step], x_variance, v_avg[step], v_variance);
+				fprintf(trajA_Average, "%.20f \t %.20f \t %.20f \t %.20f\n", x_avg[step], x_variance, v_avg[step], v_variance);
 			} else if ( i == 1 ){
-				fprintf(trajB_Average, "%e \t %e \t %e \t %e\n", x_avg[step], x_variance, v_avg[step], v_variance);
+				fprintf(trajB_Average, "%.20f \t %.20f \t %.20f \t %.20f\n", x_avg[step], x_variance, v_avg[step], v_variance);
 			}
 		}
 	}
