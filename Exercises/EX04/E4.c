@@ -1,4 +1,4 @@
-// EX03
+// EX04
 
 #include <stdio.h>
 #include <math.h>
@@ -10,14 +10,13 @@
 // Units: [Joule / Kelvin]
 #define kB (1.3806488 * pow(10,-23))
 #define dt 0.1 // Timestep
-
+#define steps 10000
 
 gsl_rng* initialize_rng();
 
 void task2(){
 
 	// Define and initialize variables
-	int steps = pow(10,4);
 	int nbr_trajectories = 5; // 5 trajectories requested from the task
 	int nbr_trajectories_to_avg = pow(10,2); // trajectories to average
 	double t[2];
@@ -51,7 +50,7 @@ void task2(){
 	// Set initial conditions for the trajectories
 	for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
 		x[0][trajectory] = 0.1;
-		v[0][trajectory] = 2.0;	
+		v[0][trajectory] = 2.0 / 1000;	// Convert milliseconds to microseconds
 	}
 
 
@@ -68,7 +67,7 @@ void task2(){
 	// Loop for the two relaxation times
 	for (int i = 0; i < 2; ++i){
 		// Calculate parameters
-		eta = 1.0 / t[i];
+		eta = 1.0/t[i];
 		c0 = exp(- eta * dt);
 		printf("c0: %.20f\n", c0);
 
@@ -146,7 +145,7 @@ void task2(){
 	double x_mul[steps], v_mul[steps]; // Use one dimentional arrays for this task for x and v
 
 	x_mul[0] = 0.1;
-	v_mul[0] = 2.0;
+	v_mul[0] = 2.0 / 1000;	// Convert milliseconds to microseconds
 	x_avg[0] = x_mul[0];
 	v_avg[0] = v_mul[0];
 
@@ -224,7 +223,6 @@ void task2(){
 void task3(int time_i){
 
 	// Define and initialize variables
-	int steps = pow(10,4);
 	int nbr_trajectories = pow(10,3); // trajectories to bin
 	double t[2];
 	double x, v;
@@ -252,12 +250,12 @@ void task3(int time_i){
 	printf("v_th: %.20f\n", v_th);
 
 	// The two relaxtation times considered in this problem
-	t[0] = 48.5; // Scale time
+	t[0] = 48.5;
 	t[1] = 147.3;
 
 	
 	x = 0.1;
-	v = 2.0;
+	v = 2.0 / 1000;	// Convert milliseconds to microseconds
 
 	// Open files for writing
 	FILE *task3;
@@ -342,7 +340,7 @@ int main(int argc, char const *argv[]){
 	// Run task 3
 	printf("\nRunning Task 3...\n");
 	printf("Sampling time: %i microsec\n", time_i);
-	task3(time_i);
+	task3(time_i/dt);
 
 	return 0;
 }

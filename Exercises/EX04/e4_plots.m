@@ -10,7 +10,7 @@ data_Bx = dlmread('trajBx.data');
 data_Bv = dlmread('trajBv.data');
 
 rows = length(data_Ax);
-% rows = 5000;
+% rows = 1000;
 
 % RELAXATION TIME A
 figure(1);
