@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <gsl/gsl_randist.h>
+#include "fft_func.h"
 #define PI 3.141592653589
 // Boltzmann constant from Wikipedia: 1.3806488 x 10^-23 Joule / Kelvin
 #define kB (1.3806488 * pow(10,-23)) // units are right because we use both micrometers and microseconds
@@ -56,10 +57,31 @@ void task2(){
 	t[0] = 48.5;
 	t[1] = 147.3;
 
+	// when to save distributions
+	int sxa[5] = {(int)(32.4/dt), (int)(231.5/dt), (int)(434.1/dt), (int)(645.3/dt), steps-1};
+	int sva[5] = {(int)(0.1/dt), (int)(94.7/dt), (int)(293.6/dt), (int)(499.6/dt), steps-1};
+
+	int sxb[9] = {(int)(38.9/dt), (int)(208.4/dt), (int)(377.9/dt), (int)(547.7/dt), (int)(716.3/dt),
+	              (int)(886.2/dt), (int)(1057.7/dt), (int)(1223.5/dt), steps-1};
+
+	int svb[9] = {(int)(0.1/dt), (int)(114.0/dt), (int)(283.1/dt), (int)(452.6/dt), (int)(620.6/dt),
+	              (int)(791.6/dt), (int)(959.5/dt), (int)(1135.6/dt), steps-1};
+
 	// for averages and standard deviations
 	double x_avg, v_avg;
 	double x_square, v_square;
 	double x_std, v_std;
+
+	// allocate memory for power spectrum
+	double *meanposA = malloc((steps) * sizeof (double));
+	double *meanvelA = malloc((steps) * sizeof (double));
+	double *meanposB = malloc((steps) * sizeof (double));
+	double *meanvelB = malloc((steps) * sizeof (double));
+	double *pspecXA = malloc((steps) * sizeof (double));
+	double *pspecVA = malloc((steps) * sizeof (double));
+	double *pspecXB = malloc((steps) * sizeof (double));
+	double *pspecVB = malloc((steps) * sizeof (double));
+	double *freq = malloc((steps) * sizeof (double));
 
 	// Open files for writing
 	FILE *timefile;
@@ -73,6 +95,7 @@ void task2(){
 	FILE *vdistA;
 	FILE *xdistB;
 	FILE *vdistB;
+	FILE *pspec;
 	timefile = fopen("time.data","w");
 	trajAx = fopen("trajAx.data","w");
 	trajAv = fopen("trajAv.data","w");
@@ -111,21 +134,6 @@ void task2(){
 					x[trajectory] = 0.1;
 					v[trajectory] = 2.0 / 1000; // Convert milliseconds to microseconds
 					a[trajectory] = - pow(omega,2.0) * x[trajectory];
-				}
-
-				// save distributions after each cycle of the harmonic potential well
-				if (step % (int)(1.0 / (f_0 * dt)) == 0) {
-					if (i == 0) {
-						fprintf(xdistA, "%e\t", x[trajectory]);
-						fprintf(vdistA, "%e\t", v[trajectory]);
-					}
-					if (i == 1) {
-						fprintf(xdistB, "%e\t", x[trajectory]);
-						fprintf(vdistB, "%e\t", v[trajectory]);
-					}
-					if(trajectory == 0) {
-						printf("Distribution saved at %.3f microseconds.\n", step * dt);
-					}
 				}
 
 				// get random gaussian
@@ -168,18 +176,48 @@ void task2(){
 					}
 				}
 
+				// save distributions at each max/min and at end
+				if (i == 0 && (step == sxa[0] || step == sxa[1] || step == sxa[2] || step == sxa[3] || step == sxa[4])) {
+					fprintf(xdistA, "%e\t", x[trajectory]);
+				}
+
+				if (i == 0 && (step == sva[0] || step == sva[1] || step == sva[2] || step == sva[3] || step == sva[4])) {
+					fprintf(vdistA, "%e\t", v[trajectory]);
+				}
+
+				if (i == 1 && (step == sxb[0] || step == sxb[1] || step == sxb[2] || step == sxb[3] || step == sxb[4]
+											  || step == sxb[5] || step == sxb[6] || step == sxb[7] || step == sxb[8])) {
+					fprintf(xdistB, "%e\t", x[trajectory]);
+				}
+
+				if (i == 1 && (step == svb[0] || step == svb[1] || step == svb[2] || step == svb[3] || step == svb[4]
+											  || step == svb[5] || step == svb[6] || step == svb[7] || step == svb[8])) {
+					fprintf(vdistB, "%e\t", v[trajectory]);
+				}
+
 			}// end loop through trajectories
 
 			// new line for distribution 
-			if (step % (1 + (int)(1.0 / (f_0 * dt))) == 0) {
-				if (i == 0) {
-					fprintf(xdistA, "\n");
-					fprintf(vdistA, "\n");
-				}
-				if (i == 1) {
-					fprintf(xdistB, "\n");
-					fprintf(vdistB, "\n");
-				}
+			if (i == 0 && (step == sxa[0] || step == sxa[1] || step == sxa[2] || step == sxa[3] || step == sxa[4])) {
+				fprintf(xdistA, "\n");
+				printf("Position distribution A saved at %.3f microseconds.\n", step * dt);
+			}
+
+			if (i == 0 && (step == sva[0] || step == sva[1] || step == sva[2] || step == sva[3] || step == sva[4])) {
+				fprintf(vdistA, "\n");
+				printf("Velocity distribution A saved at %.3f microseconds.\n", step * dt);
+			}
+
+			if (i == 1 && (step == sxb[0] || step == sxb[1] || step == sxb[2] || step == sxb[3] || step == sxb[4]
+											|| step == sxb[5] || step == sxb[6] || step == sxb[7] || step == sxb[8])) {
+				fprintf(xdistB, "\n");
+				printf("Position distribution B saved at %.3f microseconds.\n", step * dt);
+			}
+
+			if (i == 1 && (step == svb[0] || step == svb[1] || step == svb[2] || step == svb[3] || step == svb[4]
+											|| step == svb[5] || step == svb[6] || step == svb[7] || step == svb[8])) {
+				fprintf(vdistB, "\n");
+				printf("Velocity distribution B saved at %.3f microseconds.\n", step * dt);
 			}
 
 			// get the standard deviation after each time step
@@ -189,14 +227,36 @@ void task2(){
 			// save average and standard deviation to file
 			if (i == 0) {
 				fprintf(trajA_Average, "%e \t %e \t %e \t %e\n", x_avg, x_std, v_avg, v_std);
+				meanposA[step] = x_avg;
+				meanvelA[step] = v_avg;
 			}
 			if (i == 1) {
 				fprintf(trajB_Average, "%e \t %e \t %e \t %e\n", x_avg, x_std, v_avg, v_std);
+				meanposB[step] = x_avg;
+				meanvelB[step] = v_avg;
 			}
 
 		}// end loop through time
 
 	}// end loop for the two relaxation times
+
+
+	// make FFT (powerspectrum)
+	powerspectrum(meanposA, pspecXA, steps);
+	powerspectrum(meanvelA, pspecVA, steps);
+	powerspectrum(meanposB, pspecXB, steps);
+	powerspectrum(meanvelB, pspecVB, steps);
+	powerspectrum_shift(pspecXA, steps);
+	powerspectrum_shift(pspecVA, steps);
+	powerspectrum_shift(pspecXB, steps);
+	powerspectrum_shift(pspecVB, steps);
+	fft_freq_shift(freq, dt, steps);
+
+	pspec = fopen("pspec.data","w");
+	for (int i = 0; i < steps; i++) {
+		fprintf(pspec, "%e \t %e \t %e \t %e \t %e \n", freq[i], pspecXA[i], pspecVA[i], pspecXB[i], pspecVB[i]);
+	}
+	fclose(pspec);
 
 	// Close data files
 	fclose(timefile);
@@ -210,196 +270,8 @@ void task2(){
 	fclose(vdistA);
 	fclose(xdistB);
 	fclose(vdistB);
-
-	/*
-	/////////////////////////////////////////////////////////////
-	// Run for multiple trajectories
-	// Basically a copy/paste of the above code, but not really..
-	/////////////////////////////////////////////////////////////
-	double x_avg[steps], v_avg[steps];
-	double x_square[steps], v_square[steps];
-	double x_variance, v_variance;
-	double x_mul[steps], v_mul[steps]; // Use one dimensional arrays for this task for x and v
-
-	x_mul[0] = 0.1;
-	v_mul[0] = 2.0 / 1000;	// Convert milliseconds to microseconds
-	x_avg[0] = x_mul[0];
-	v_avg[0] = v_mul[0];
-
-	// Open files for writing
-	FILE *trajA_Average;
-	FILE *trajB_Average;
-	trajA_Average = fopen("trajA_Average.data","w");
-	trajB_Average = fopen("trajB_Average.data","w");
-
-	// Loop for the two relaxation times
-	for (int i = 0; i < 2; ++i){
-		// Calculate parameters
-		eta = 1.0/t[i];
-		c0 = exp(- eta * dt);
-
-		for (int trajectory = 0; trajectory < nbr_trajectories_to_avg; ++trajectory){
-				
-				// Particle acceleration 
-			// https://en.wikipedia.org/wiki/Particle_acceleration
-			a = - pow(omega,2.0) * x_mul[0];
-			
-			for (int step = 1; step < steps; ++step){
-
-				// Get random samples
-			rand1 = gsl_rng_uniform(my_rng);
-
-			// Use Bow-Muller transform to get values from normal distribution
-			// Recommended on: https://stackoverflow.com/questions/2325472/generate-random-numbers-following-a-normal-distribution-in-c-c
-			G1 = sqrt(-2.0 * log(rand1)) * cos(2.0 * PI * rand1);
-
-			// Temporary velocity t + 1
-			v_temp = (1.0 / 2.0) * a * dt + sqrt(c0) * v_mul[step - 1] \
-														+ v_th * sqrt(1 - c0) * G1;
-
-			// Position x + 1
-		x_mul[step] = x_mul[step - 1] + v_temp * dt;
-
-		// New particle acceleration
-		a = - pow(omega,2.0) * x_mul[step];
-
-		// Get new random sample
-		rand2 = gsl_rng_uniform(my_rng);
-		G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
-
-		// Final velocity t + 1
-		v_mul[step] = (1.0 / 2.0) * sqrt(c0) * a * dt + sqrt(c0) * v_temp \
-													+ v_th * sqrt(1 - c0) * G2;
-
-		// Get averages and variance
-		x_avg += x_mul[step] / nbr_trajectories_to_avg;
-		v_avg += v_mul[step] / nbr_trajectories_to_avg;
-		x_square[step] += pow(x_avg, 2.0) / nbr_trajectories_to_avg;
-		v_square[step] += pow(v_avg, 2.0) / nbr_trajectories_to_avg;
-			}
-		}
-			
-		// Export values from averages
-		for (int step = 0; step < steps; ++step){
-			// Compute variance for x and v
-			x_variance = sqrt(x_avg - x_square[step]);
-			v_variance = sqrt(v_avg - v_square[step]);
-			if( i == 0 ){
-				fprintf(trajA_Average, "%.20f \t %.20f \t %.20f \t %.20f\n", x_avg, x_variance, v_avg, v_variance);
-			} else if ( i == 1 ){
-				fprintf(trajB_Average, "%.20f \t %.20f \t %.20f \t %.20f\n", x_avg, x_variance, v_avg, v_variance);
-			}
-		}
-	}
-	// Save & close
-	fclose(trajA_Average);
-	fclose(trajB_Average);
-	*/
-
 }
 
-/*
-void task3(int time_i){
-
-	// Define and initialize variables
-	int nbr_trajectories = pow(10,3); // trajectories to bin
-	double t[2];
-	double x, v;
-	double X[nbr_trajectories][2], V[nbr_trajectories][2];
-	// random number generator
-	gsl_rng *my_rng = initialize_rng();
-	double rand1, rand2, G1, G2, v_temp;
-	double c0, eta, a;
-	double T = 297.0; // Kelvin
-	double f_0 = 3.0; // Vibrational frequency for the Brownian particle
-	double omega = 2 * PI * f_0; // Converting vibrational frequency to angular, for Brownian particle
-
-	double m;
-	double diameter = 2.79; // Units: [micrometers]
-	double density = 2.65; // Units: [grams / cm^3]
-
-	// Calculate volume of sphere. Units: [micrometers^3]
-	double volume = (4.0 / 3.0) * PI * pow(diameter / 2.0, 3.0);
-	printf("Volume: %e micrometers^3\n", volume);
-	// Calculate mass of particle. Units: [grams]
-	m = density * pow(10.0, -12.0) * volume; // Multiply by 10^-12 for cm^3 -> micrometers^3
-	m = m * pow(10.0, -3.0); // Multiply by 10^-3 for g -> kg
-	printf("Mass:   %e kg / micrometers^3\n", m);
-
-	// Calculate v_th value
-	double v_th = sqrt(kB * T / m);
-	printf("v_th:   %.20f meters per second\n", v_th);
-
-	// The two relaxtation times considered in this problem
-	t[0] = 48.5;
-	t[1] = 147.3;
-
-	x = 0.1;
-	v = 2.0 / 1000;	// Convert milliseconds to microseconds
-
-	// Open files for writing
-	FILE *task3;
-	task3 = fopen("task3.data","w");
-
-	// Loop for the two relaxation times
-	for (int i = 0; i < 2; ++i){
-		// Calculate parameters
-		eta = 1.0/t[i];
-		c0 = exp(- eta * dt);
-
-		for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
-				
-				// Particle acceleration 
-			// https://en.wikipedia.org/wiki/Particle_acceleration
-			a = - pow(omega,2.0) * x;
-			
-			for (int step = 1; step < steps; ++step){
-
-				// Get random samples
-			rand1 = gsl_rng_uniform(my_rng);
-
-			// Use Bow-Muller transform to get values from normal distribution
-			// Recommended on: https://stackoverflow.com/questions/2325472/generate-random-numbers-following-a-normal-distribution-in-c-c
-			G1 = sqrt(-2.0 * log(rand1)) * cos(2.0 * PI * rand1);
-
-			// Temporary velocity t + 1
-			v_temp = (1.0 / 2.0) * a * dt + sqrt(c0) * v \
-														+ v_th * sqrt(1 - c0) * G1;
-
-			// Position x + 1
-		x = x + v_temp * dt;
-
-		// New particle acceleration
-		a = - pow(omega,2.0) * x;
-
-		// Get new random sample
-		rand2 = gsl_rng_uniform(my_rng);
-		G2 = sqrt(-2.0 * log(rand2)) * cos(2.0 * PI * rand2);
-
-		// Final velocity t + 1
-		v = (1.0 / 2.0) * sqrt(c0) * a * dt + sqrt(c0) * v_temp \
-													+ v_th * sqrt(1 - c0) * G2;
-
-
-		if(step == (time_i * dt)){
-			X[trajectory][i] = x;
-			V[trajectory][i] = v;
-		 	break;
-		}
-			}
-		}		
-	}
-
-	// Save & close
-	for (int trajectory = 0; trajectory < nbr_trajectories; ++trajectory){
-		fprintf(task3, "%.20f \t %.20f \t %.20f \t %.20f\n", X[trajectory][0], V[trajectory][0], X[trajectory][1], V[trajectory][1]);
-	}
-	fclose(task3);
-
-}
-*/
-
-// int main(int argc, char const *argv[]){
 
 int main(){
 

@@ -5,7 +5,8 @@ CC = gcc # c-compiler
 CFLAGS = -O3 -W # -O3 gives optimization, -W gives warnings
 LIBS = -lm -lgsl -lgslcblas # libraries
 
-OBJECTS = E4.o # object files to produce
+HEADERS = fft_func.h
+OBJECTS = E4.o fft_func.o # object files to produce
 PROGRAM = go # name of executable to be built
 
 #
