@@ -1,108 +1,163 @@
-%% Task 2
-clc; clf; clear all;
+%% data import
+clear all;
+close all;
 
-format long g
+data_time = dlmread('time.data');
 
 data_Ax = dlmread('trajAx.data');
-data_Av = dlmread('trajAv.data');
+data_Av = dlmread('trajAv.data') .* 1000;
 
 data_Bx = dlmread('trajBx.data');
-data_Bv = dlmread('trajBv.data');
+data_Bv = dlmread('trajBv.data') .* 1000;
 
-rows = length(data_Ax);
-% rows = 1000;
-
-% RELAXATION TIME A
-figure(1);
-subplot(2,2,1)
-plot(1:rows, data_Ax(1:rows,1),1:rows, data_Ax(1:rows,2),1:rows, data_Ax(1:rows,3),1:rows, data_Ax(1:rows,4),1:rows, data_Ax(1:rows,5))
-title('Positions for relaxation time \tau = 48.5 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('x [\mum]')
-
-subplot(2,2,2)
-plot(1:rows, data_Av(1:rows,1),1:rows, data_Av(1:rows,2),1:rows, data_Av(1:rows,3),1:rows, data_Av(1:rows,4),1:rows, data_Av(1:rows,5))
-title('Velocities for relaxation time \tau = 48.5 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('v [\mum/ms]')
-
-% RELAXATION TIME B
-subplot(2,2,3)
-plot(1:rows, data_Bx(1:rows,1),1:rows, data_Bx(1:rows,2),1:rows, data_Bx(1:rows,3),1:rows, data_Bx(1:rows,4),1:rows, data_Bx(1:rows,5))
-title('Positions for relaxation time \tau = 147.3 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('x [\mum]')
-
-subplot(2,2,4)
-plot(1:rows, data_Bv(1:rows,1),1:rows, data_Bv(1:rows,2),1:rows, data_Bv(1:rows,3),1:rows, data_Bv(1:rows,4),1:rows, data_Bv(1:rows,5))
-title('Velocities for relaxation time \tau = 147.3 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('v [\mum/ms]')
-
-% FOR AVERAGING
 data_A = importdata('trajA_Average.data');
+data_A(:,3:4) = data_A(:,3:4) .* 1000;
 data_B = importdata('trajB_Average.data');
+data_B(:,3:4) = data_B(:,3:4) .* 1000;
 
-% rows = length(data_A);
-% rows = 1000;
+ntraj = size(data_Ax, 2);
+nmean = 10000;
+
+%% plot
+fig1 = figure(1); set(fig1, 'Position', [100, 10, 1200, 800]);
 
 % RELAXATION TIME A
-figure(2);
 subplot(2,2,1)
-std_p = data_A(1:rows,1) + data_A(1:rows,2);
-std_m = data_A(1:rows,1) - data_A(1:rows,2);
-plot(1:rows, data_A(1:rows,1), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
-title('Averaged positions for relaxation time \tau = 48.5 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('x [\mum]')
+hold on
+for traj = 1:ntraj
+  h1 = plot(data_time, data_Ax(:,traj),'Color', [0.7 0.7 0.7]);
+end
+h3 = plot(data_time, data_A(:,1) + data_A(:,2), 'b:','linewidth',2);
+plot(data_time, data_A(:,1) - data_A(:,2), 'b:','linewidth',2)
+h2 = plot(data_time, data_A(:,1),'r-','linewidth', 3);
+set(gca, 'fontsize', 14)
+title('Positions for relaxation time \tau = 48.5 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('x [\mum]','fontsize',20)
+lgd = legend([h1 h2 h3], {'sample trajectories', ['mean (' num2str(nmean) ' trajectories)'], 'standard deviation'});
+set(lgd,'fontsize',14)
 
 subplot(2,2,2)
-std_p = data_A(1:rows,3) + data_A(1:rows,4);
-std_m = data_A(1:rows,3) - data_A(1:rows,4);
-plot(1:rows, data_A(1:rows,3), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
-title('Averaged velocities for relaxation time \tau = 48.5 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('v [\mum/ms]')
+hold on
+for traj = 1:ntraj
+  h1 = plot(data_time, data_Av(:,traj),'Color', [0.7 0.7 0.7]);
+end
+h3 = plot(data_time, data_A(:,3) + data_A(:,4), 'b:','linewidth',2);
+plot(data_time, data_A(:,3) - data_A(:,4), 'b:','linewidth',2)
+h2 = plot(data_time, data_A(:,3),'r-','linewidth', 3);
+set(gca, 'fontsize', 14)
+title('Velocities for relaxation time \tau = 48.5 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('v [\mum/ms]','fontsize',20)
+lgd = legend([h1 h2 h3], {'sample trajectories', ['mean (' num2str(nmean) ' trajectories)'], 'standard deviation'});
+set(lgd,'fontsize',14)
 
 % RELAXATION TIME B
 subplot(2,2,3)
-std_p = data_B(1:rows,1) + data_B(1:rows,2);
-std_m = data_B(1:rows,1) - data_B(1:rows,2);
-plot(1:rows, data_B(1:rows,2), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
-title('Averaged positions for relaxation time \tau = 147.3 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('x [\mum]')
+hold on
+for traj = 1:ntraj
+  h1 = plot(data_time, data_Bx(:,traj),'Color', [0.7 0.7 0.7]);
+end
+h3 = plot(data_time, data_B(:,1) + data_B(:,2), 'b:','linewidth',2);
+plot(data_time, data_B(:,1) - data_B(:,2), 'b:','linewidth',2)
+h2 = plot(data_time, data_B(:,1),'r-','linewidth', 3);
+set(gca, 'fontsize', 14)
+title('Positions for relaxation time \tau = 147.3 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('x [\mum]','fontsize',20)
+lgd = legend([h1 h2 h3], {'sample trajectories', ['mean (' num2str(nmean) ' trajectories)'], 'standard deviation'});
+set(lgd,'fontsize',14)
 
 subplot(2,2,4)
-std_p = data_B(1:rows,3) + data_B(1:rows,4);
-std_m = data_B(1:rows,3) - data_B(1:rows,4);
-plot(1:rows, data_B(1:rows,3), 1:rows, std_p,'r--', 1:rows, std_m,'r--')
-title('Averaged velocities for relaxation time \tau = 147.3 \mus')
-xlabel('Time [\mus * \Deltat]')
-ylabel('v [\mum/ms]')
+hold on
+for traj = 1:ntraj
+  h1 = plot(data_time, data_Bv(:,traj),'Color', [0.7 0.7 0.7]);
+end
+h3 = plot(data_time, data_B(:,3) + data_B(:,4), 'b:','linewidth',2);
+plot(data_time, data_B(:,3) - data_B(:,4), 'b:','linewidth',2)
+h2 = plot(data_time, data_B(:,3),'r-','linewidth', 3);
+set(gca, 'fontsize', 14)
+title('Velocities for relaxation time \tau = 147.3 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('v [\mum/ms]','fontsize',20)
+lgd = legend([h1 h2 h3], {'sample trajectories', ['mean (' num2str(nmean) ' trajectories)'], 'standard deviation'});
+set(lgd,'fontsize',14)
 
-format short
+saveas(fig1, 'task2.png')
+setPDFsize;
+saveas(fig1, 'task2.pdf')
 
-%% Task 3
+%% Task 3 data import
 
-clc; clf; clear all;
+clear all;
+close all;
 
-format long g
+xA = importdata('xdistA.data');
+vA = importdata('vdistA.data') .* 1000;
+xB = importdata('xdistB.data');
+vB = importdata('vdistB.data') .* 1000;
+n = size(xA,1);
 
-data = dlmread('task3.data');
+%% Task 3 plotting
+fig1 = figure(1); set(fig1, 'Position', [100, 10, 1200, 800]);
+cols = get(gca,'colororder');
 
-figure(3);
 subplot(2,2,1)
-histfit(data(:,1),20,'normal');
-title('Distribution of positions for \tau = 48.5 \mus')
-subplot(2,2,2)
-histfit(data(:,2),20,'normal');
-title('Distribution of velocities for \tau = 48.5 \mus')
-subplot(2,2,3)
-histfit(data(:,3),20,'normal');
-title('Distribution of positions for \tau = 147.3 \mus')
-subplot(2,2,4)
-histfit(data(:,4),20,'normal');
-title('Distribution of velocities for \tau = 147.3 \mus')
+hold on
+x = -0.15:0.001:0.15;
+for i = 2:n
+  plot(x, pdf(fitdist(xA(i,:)', 'Normal'), x), 'color', cols(i,:),...
+    'DisplayName',['$t = ' num2str(i-1) '/f_0$'], 'linestyle', '--')
+end
+set(gca, 'fontsize', 14)
+title('Distribution of positions for \tau = 48.5 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('x [\mum]','fontsize',20)
+lgd = legend('show');
+set(lgd, 'fontsize', 14, 'location', 'northwest', 'interpreter', 'latex')
 
-format short
+subplot(2,2,2)
+hold on
+x = -3:0.01:3;
+for i = 2:n
+  plot(x, pdf(fitdist(vA(i,:)', 'Normal'), x), 'color', cols(i,:),...
+    'DisplayName',['$t = ' num2str(i-1) '/f_0$'], 'linestyle', '--')
+end
+set(gca, 'fontsize', 14)
+title('Distribution of velocities for \tau = 48.5 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('v [\mum/ms]','fontsize',20)
+lgd = legend('show');
+set(lgd, 'fontsize', 14, 'location', 'northwest', 'interpreter', 'latex')
+
+subplot(2,2,3)
+hold on
+x = -0.15:0.001:0.15;
+for i = 2:n
+  plot(x, pdf(fitdist(xB(i,:)', 'Normal'), x), 'color', cols(i,:),...
+    'DisplayName',['$t = ' num2str(i-1) '/f_0$'], 'linestyle', '--')
+end
+set(gca, 'fontsize', 14)
+title('Distribution of positions for \tau = 147.3 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('x [\mum]','fontsize',20)
+lgd = legend('show');
+set(lgd, 'fontsize', 14, 'location', 'northwest', 'interpreter', 'latex')
+
+subplot(2,2,4)
+hold on
+x = -3:0.01:3;
+for i = 2:n
+  plot(x, pdf(fitdist(vB(i,:)', 'Normal'), x), 'color', cols(i,:),...
+    'DisplayName',['$t = ' num2str(i-1) '/f_0$'], 'linestyle', '--')
+end
+set(gca, 'fontsize', 14)
+title('Distribution of velocities for \tau = 147.3 \mus','fontsize',20)
+xlabel('Time [\mus]','fontsize',20)
+ylabel('v [\mum/ms]','fontsize',20)
+lgd = legend('show');
+set(lgd, 'fontsize', 14, 'location', 'northwest', 'interpreter', 'latex')
+
+saveas(fig1, 'task3.png')
+setPDFsize;
+saveas(fig1, 'task3.pdf')

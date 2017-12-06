@@ -1,5 +1,5 @@
 # 
-# Constants for Exercise 3
+# Constants for Exercise 4
 #
 CC = gcc # c-compiler
 CFLAGS = -O3 -W # -O3 gives optimization, -W gives warnings
