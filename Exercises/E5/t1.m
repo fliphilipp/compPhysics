@@ -3,7 +3,6 @@
 %  http://farside.ph.utexas.edu/teaching/329/lectures/node62.html
 
 clear all
-close all
 
 a = 0;
 b = 5;
@@ -23,6 +22,8 @@ rho_r = 4 / a0^3 * r.^2 .* exp(-2/a0*r); % hydrogen ground state electron densit
 rho = a0^3 / pi .* exp(-2/a0*r); % leave the 4 * pi * r.^2 term out for whatever reason
 subplot(2,1,1)
 plot(r,rho_r,'linewidth',lwd)
+hold on
+plot(r,rho,'linewidth',lwd)
 sum(rho .* h)
 set(gca,'fontsize',15)
 lgd = legend('$n_s(r)$ electron density');
