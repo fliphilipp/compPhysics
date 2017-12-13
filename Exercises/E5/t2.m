@@ -1,6 +1,6 @@
 a = 0;
-b = 7;
-n = 10000;
+b = 10;
+n = 1000;
 h = (b-a)/n;
 onevec = ones(n,1);
 r = (a+h:h:b)';
@@ -17,6 +17,8 @@ mat = -1/2 * mat - spdiags(nucPot, 0, n, n);
 % min e_value is ground state energy, minimal eigenvector
 % min e_funct is non-normalized f(r)
 [e_funct, e_values] = eig(full(mat));
+% opts.maxit = 10000;
+% [e_funct, e_values] = eigs(mat,1,'sa',opts);
 [E, iE] = min(diag(e_values));
 disp(['ground state energy: ' num2str(E)])
 fr = e_funct(:,iE);
@@ -25,6 +27,7 @@ fr = e_funct(:,iE);
 fr2 = fr.^2;
 fr2 = fr2 ./ sum(fr2*h);
 fr = sqrt(fr2);
+density = fr2 ./ (4*pi*r.^2);
 
 % the wave function according to our ansatz
 psi = 1/sqrt(4*pi) * fr ./ r; % the equation from the assignment
@@ -38,10 +41,13 @@ psi02 = 1 / (4*pi) * dfdr0^2;
 fig2 = figure(2); set(fig2, 'Position', [100, 0, 800, 800]);
 subplot(2,1,1)
 hold on
+plot(r,density,'linewidth',lwd)
 plot(r,fr2,'linewidth',lwd)
 set(gca, 'fontsize',16)
 ylabel('$f(r)^2$','interpreter','latex','fontsize',35)
 xlabel('$r\ [a.u.]$','interpreter','latex','fontsize',35)
+lgd = legend('density', '$f(r)^2$');
+set(lgd, 'interpreter','latex', 'fontsize', 20);
 
 % plot psi^2
 subplot(2,1,2)
