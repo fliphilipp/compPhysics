@@ -1,2 +1,3 @@
-# ComPhy
-Beer is good!
+# Some computational physics exploarations
+
+
