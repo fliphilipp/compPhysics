@@ -1,3 +1,3 @@
-# Some computational physics exploarations
+# Some computational physics explorations
 
 
